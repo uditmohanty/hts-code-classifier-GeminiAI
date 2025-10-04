@@ -78,6 +78,22 @@ if 'form_description' not in st.session_state:
     st.session_state.form_description = ""
 if 'form_use' not in st.session_state:
     st.session_state.form_use = ""
+if 'classification_complete' not in st.session_state:
+    st.session_state.classification_complete = False
+
+def clear_form():
+    """Clear all form fields"""
+    st.session_state.form_material = ""
+    st.session_state.form_description = ""
+    st.session_state.form_use = ""
+    st.session_state.auto_filled_data = None
+    st.session_state.image_analysis = None
+    st.session_state.classification_complete = False
+    # Clear input fields by resetting their session state keys
+    if 'product_name_input' in st.session_state:
+        del st.session_state.product_name_input
+    if 'origin_input' in st.session_state:
+        del st.session_state.origin_input
 
 def main():
     """Main application entry point"""
@@ -142,6 +158,16 @@ def show_classifier_page():
     st.markdown('<div class="main-header">📦 HS Code Classification System</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">AI-powered customs classification for international trade</div>', unsafe_allow_html=True)
     
+    # Check if coming from a completed classification
+    if st.session_state.classification_complete:
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.success("✅ Previous classification saved!")
+            if st.button("🆕 Start New Classification", type="primary", use_container_width=True):
+                clear_form()
+                st.rerun()
+        st.markdown("---")
+    
     # Input section
     st.subheader("Product Information")
     
@@ -165,7 +191,13 @@ def show_classifier_page():
     with col2:
         st.write("")  # Spacing
         st.write("")  # Spacing
-        auto_fill_clicked = st.button("🤖 Auto-Fill", type="secondary", use_container_width=True)
+        # Use a unique key for auto-fill button to avoid state issues
+        auto_fill_clicked = st.button(
+            "🤖 Auto-Fill", 
+            type="secondary", 
+            use_container_width=True,
+            key=f"auto_fill_{datetime.now().timestamp()}"
+        )
     
     # Handle auto-fill
     if auto_fill_clicked:
@@ -200,7 +232,7 @@ def show_classifier_page():
                         st.code(traceback.format_exc())
     
     # Show auto-fill banner if data exists
-    if st.session_state.auto_filled_data:
+    if st.session_state.auto_filled_data and not st.session_state.classification_complete:
         model_info = st.session_state.auto_filled_data.get('model_used', '')
         if model_info:
             st.info(f"✨ Using AI Model: {model_info}")
@@ -246,7 +278,7 @@ def show_classifier_page():
         )
     
     # Clear auto-fill button
-    if st.session_state.auto_filled_data:
+    if st.session_state.auto_filled_data and not st.session_state.classification_complete:
         if st.button("🔄 Clear Auto-Fill", key="clear_autofill"):
             st.session_state.auto_filled_data = None
             st.session_state.form_description = ""
@@ -379,6 +411,9 @@ def show_classifier_page():
                     st.session_state.current_result = result
                     st.session_state.current_product_info = product_info
                     
+                    # Mark classification as complete
+                    st.session_state.classification_complete = True
+                    
                     # Display results
                     display_results(result, product_info)
                     
@@ -392,6 +427,13 @@ def display_results(result, product_info):
     """Display classification results"""
     
     st.success("✅ Classification Complete!")
+    
+    # Add button to start new classification
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if st.button("🆕 New Classification", type="primary", use_container_width=True):
+            clear_form()
+            st.rerun()
     
     # Main result card
     st.subheader("Recommended HS Code")
