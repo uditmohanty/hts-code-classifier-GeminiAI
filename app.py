@@ -155,6 +155,7 @@ def show_classifier_page():
                 if enhanced_data['success']:
                     st.session_state.auto_filled_data = enhanced_data
                     st.success("✨ Details auto-generated! Review and edit if needed.")
+                    st.rerun()  # FIXED: Added rerun to update form fields
                 else:
                     st.error(f"❌ Failed to auto-generate: {enhanced_data.get('error')}")
     
@@ -167,6 +168,10 @@ def show_classifier_page():
         default_description = st.session_state.auto_filled_data.get('description', '')
         default_material = st.session_state.auto_filled_data.get('material', '')
         default_use = st.session_state.auto_filled_data.get('intended_use', '')
+    
+    # Show auto-fill banner if data exists
+    if st.session_state.auto_filled_data:
+        st.success("✨ Details auto-generated! Review and edit if needed.")
     
     # Rest of the form
     col1, col2 = st.columns(2)
