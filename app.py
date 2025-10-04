@@ -3,22 +3,6 @@ import json
 import os
 import tempfile
 from datetime import datetime
-from typing import Optional, Dict
-import plotly.graph_objects as go
-import plotly.express as px
-
-# GCP imports (optional - will handle if not available)
-try:
-    from google.cloud import firestore, storage
-    from src.tools.gcp_search_tools import GCPSearchTools
-    from src.agents.gcp_gemini_classifier import GCPGeminiClassifier
-    from config.gcp_settings import GCPConfig
-    GCP_AVAILABLE = True
-except ImportError:
-    GCP_AVAILABLE = False
-    print("GCP modules not available - running in local mode")
-
-# Local imports
 from src.agents.hs_code_agent import HSCodeAgent
 from src.agents.fallback_analyzer import FallbackAnalyzer
 from src.utils.report_generator import ReportGenerator
@@ -27,10 +11,12 @@ from src.utils.analytics import AnalyticsEngine
 from src.utils.duty_calculator import DutyCalculator
 from src.utils.product_enhancer import ProductEnhancer
 from src.utils.image_analyzer import ImageAnalyzer
+import plotly.graph_objects as go
+import plotly.express as px
 
 # Page config
 st.set_page_config(
-    page_title="HS Code Classifier - AI Powered",
+    page_title="HS Code Classifier",
     page_icon="📦",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -65,67 +51,20 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] {
         padding: 1rem 2rem;
     }
-    .gcp-badge {
-        background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
-        color: white;
-        padding: 0.3rem 0.6rem;
-        border-radius: 0.3rem;
-        font-size: 0.75rem;
-        font-weight: bold;
-    }
-    .local-badge {
-        background: #6c757d;
-        color: white;
-        padding: 0.3rem 0.6rem;
-        border-radius: 0.3rem;
-        font-size: 0.75rem;
-        font-weight: bold;
-    }
 </style>
 """, unsafe_allow_html=True)
-
-# Initialize GCP services (if available)
-@st.cache_resource
-def init_gcp_services():
-    """Initialize GCP services if available"""
-    if not GCP_AVAILABLE:
-        return None
-    
-    try:
-        return {
-            'search_tools': GCPSearchTools(),
-            'classifier': GCPGeminiClassifier(),
-            'firestore': firestore.Client(project=GCPConfig.PROJECT_ID),
-            'storage': storage.Client(project=GCPConfig.PROJECT_ID),
-            'project_id': GCPConfig.PROJECT_ID,
-            'region': GCPConfig.REGION
-        }
-    except Exception as e:
-        st.warning(f"GCP initialization failed: {e}. Running in local mode.")
-        return None
 
 # Initialize session state
 if 'classification_history' not in st.session_state:
     st.session_state.classification_history = []
-
-if 'services_initialized' not in st.session_state:
-    with st.spinner("Initializing services..."):
-        # Try to initialize GCP
-        st.session_state.gcp_services = init_gcp_services()
-        
-        # Initialize local services
+if 'agent' not in st.session_state:
+    with st.spinner("Initializing AI Agent..."):
         st.session_state.agent = HSCodeAgent()
         st.session_state.fallback = FallbackAnalyzer()
         st.session_state.feedback_manager = FeedbackManager()
         st.session_state.calculator = DutyCalculator()
         st.session_state.enhancer = ProductEnhancer()
         st.session_state.image_analyzer = ImageAnalyzer()
-        
-        st.session_state.services_initialized = True
-        
-        # Set default mode
-        if 'use_gcp' not in st.session_state:
-            st.session_state.use_gcp = st.session_state.gcp_services is not None
 
 def main():
     """Main application entry point"""
@@ -136,34 +75,10 @@ def main():
         <div style='text-align: center; padding: 1.5rem 0; background: linear-gradient(135deg, #1f77b4 0%, #2ca02c 100%); border-radius: 10px; margin-bottom: 1rem;'>
             <div style='font-size: 2.5rem; margin-bottom: 0.5rem;'>🌐</div>
             <div style='color: white; font-weight: bold; font-size: 1.2rem;'>HS CODE</div>
-            <div style='color: #e0e0e0; font-size: 0.8rem;'>Classifier Pro</div>
+            <div style='color: #e0e0e0; font-size: 0.8rem;'>Classifier</div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Backend selection
-        st.subheader("Backend Configuration")
-        
-        if GCP_AVAILABLE and st.session_state.gcp_services:
-            use_gcp = st.toggle(
-                "Use Google Cloud Platform",
-                value=st.session_state.use_gcp,
-                help="Toggle between GCP and local backend"
-            )
-            st.session_state.use_gcp = use_gcp
-            
-            if use_gcp:
-                st.markdown('<span class="gcp-badge">🔵 GCP MODE</span>', unsafe_allow_html=True)
-                st.caption(f"Project: {st.session_state.gcp_services['project_id']}")
-                st.caption(f"Region: {st.session_state.gcp_services['region']}")
-            else:
-                st.markdown('<span class="local-badge">⚫ LOCAL MODE</span>', unsafe_allow_html=True)
-        else:
-            st.markdown('<span class="local-badge">⚫ LOCAL MODE</span>', unsafe_allow_html=True)
-            st.caption("GCP not configured")
-        
-        st.markdown("---")
-        
-        # Navigation
         page = st.radio(
             "Navigation",
             ["🔍 Classifier", "💰 Duty Calculator", "📊 Analytics", "📚 About"],
@@ -186,7 +101,7 @@ def main():
             st.info("No classifications yet")
         
         st.markdown("---")
-        st.caption("v2.0.0 | Multi-Backend Support")
+        st.caption("v1.0.0 | AI-Powered Classification")
     
     # Route to pages
     if page == "🔍 Classifier":
@@ -202,12 +117,7 @@ def show_classifier_page():
     """Product classification interface"""
     
     st.markdown('<div class="main-header">📦 HS Code Classification System</div>', unsafe_allow_html=True)
-    
-    # Show active backend
-    if st.session_state.use_gcp:
-        st.markdown('<div class="sub-header">AI-powered customs classification via Google Cloud Platform</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="sub-header">AI-powered customs classification for international trade</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">AI-powered customs classification for international trade</div>', unsafe_allow_html=True)
     
     # Input section
     st.subheader("Product Information")
@@ -224,8 +134,8 @@ def show_classifier_page():
         )
     
     with col2:
-        st.write("")
-        st.write("")
+        st.write("")  # Spacing
+        st.write("")  # Spacing
         auto_fill = st.button("🤖 Auto-Fill", type="secondary", use_container_width=True)
     
     # Initialize session state for auto-filled values
@@ -237,16 +147,16 @@ def show_classifier_page():
     # Handle auto-fill
     if auto_fill:
         if not product_name:
-            st.warning("Please enter a product name first")
+            st.warning("⚠️ Please enter a product name first")
         else:
-            with st.spinner("AI is analyzing and generating detailed product information..."):
+            with st.spinner("🤖 AI is analyzing and generating detailed product information..."):
                 enhanced_data = st.session_state.enhancer.enhance_product_info(product_name)
                 
                 if enhanced_data['success']:
                     st.session_state.auto_filled_data = enhanced_data
-                    st.success("Details auto-generated! Review and edit if needed.")
+                    st.success("✨ Details auto-generated! Review and edit if needed.")
                 else:
-                    st.error(f"Failed to auto-generate: {enhanced_data.get('error')}")
+                    st.error(f"❌ Failed to auto-generate: {enhanced_data.get('error')}")
     
     # Get values (either auto-filled or empty)
     default_description = ""
@@ -283,7 +193,7 @@ def show_classifier_page():
             value=default_description,
             placeholder="Enter product features, size, style, function...",
             height=100,
-            help="Provide as much detail as possible",
+            help="Provide as much detail as possible. Use Auto-Fill for AI assistance!",
             key="description_input"
         )
         
@@ -311,6 +221,7 @@ def show_classifier_page():
         help="Upload a product image for AI-powered analysis"
     )
     
+    # Display and analyze image
     if uploaded_file is not None:
         col1, col2 = st.columns([2, 1])
         
@@ -322,36 +233,51 @@ def show_classifier_page():
             st.write("")
             analyze_image = st.button("🔍 Analyze Image", type="secondary", use_container_width=True)
         
+        # Handle image analysis
         if analyze_image:
-            with st.spinner("AI is analyzing the product image..."):
+            with st.spinner("🖼️ AI is analyzing the product image..."):
+                # Save uploaded file temporarily
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
                     tmp_file.write(uploaded_file.getvalue())
                     tmp_path = tmp_file.name
                 
+                # Analyze image
                 image_result = st.session_state.image_analyzer.analyze_product_image(tmp_path)
+                
+                # Clean up temp file
                 os.unlink(tmp_path)
                 
                 if image_result['success']:
-                    st.success("Image analyzed successfully!")
+                    st.success("✅ Image analyzed successfully!")
+                    
+                    # Store results
                     st.session_state.image_analysis = image_result
                     
+                    # Display analysis
                     with st.expander("📋 Image Analysis Results", expanded=True):
-                        st.write(f"**Product:** {image_result['product_name']}")
+                        st.write(f"**Product Identified:** {image_result['product_name']}")
                         st.write(f"**Material:** {image_result['material']}")
+                        st.write(f"**Construction:** {image_result['construction']}")
                         st.write(f"**Description:** {image_result['description']}")
-                        st.write(f"**Use:** {image_result['intended_use']}")
+                        if image_result['features']:
+                            st.write(f"**Features:** {', '.join(image_result['features'])}")
+                        st.write(f"**Intended Use:** {image_result['intended_use']}")
+                        if image_result['additional_notes']:
+                            st.write(f"**Notes:** {image_result['additional_notes']}")
                 else:
-                    st.error(f"Failed to analyze image: {image_result.get('error')}")
+                    st.error(f"❌ Failed to analyze image: {image_result.get('error')}")
         
+        # Button to use image analysis
         if st.session_state.image_analysis and st.session_state.image_analysis['success']:
-            if st.button("📝 Use Image Data", type="primary", key="use_image_data"):
+            if st.button("📝 Use Image Data to Fill Form", type="primary", key="use_image_data"):
                 st.session_state.auto_filled_data = {
+                    'enhanced_name': st.session_state.image_analysis['product_name'],
                     'description': st.session_state.image_analysis['description'],
                     'material': st.session_state.image_analysis['material'],
                     'intended_use': st.session_state.image_analysis['intended_use'],
                     'success': True
                 }
-                st.success("Form filled with image analysis data!")
+                st.success("✅ Form filled with image analysis data!")
                 st.rerun()
     
     st.markdown("---")
@@ -372,107 +298,42 @@ def show_classifier_page():
     
     if classify_button:
         if not product_name or not description:
-            st.error("Please enter at least Product Name and Description")
+            st.error("⚠️ Please enter at least Product Name and Description")
         else:
-            classify_product(product_name, description, material, use, origin, search_depth, enable_fallback)
-
-def classify_product(product_name, description, material, use, origin, search_depth, enable_fallback):
-    """Main classification logic - handles both GCP and local modes"""
-    
-    with st.spinner("Analyzing product and applying classification rules..."):
-        product_info = {
-            'product_name': product_name,
-            'description': description,
-            'material': material,
-            'use': use,
-            'origin': origin
-        }
-        
-        try:
-            if st.session_state.use_gcp:
-                # Use GCP backend
-                result = classify_with_gcp(product_info, search_depth)
-            else:
-                # Use local backend
-                result = classify_with_local(product_info, enable_fallback)
-            
-            # Add metadata
-            result['timestamp'] = datetime.now().isoformat()
-            result['product_info'] = product_info
-            result['backend'] = 'GCP' if st.session_state.use_gcp else 'Local'
-            
-            # Save to history
-            st.session_state.classification_history.append(result)
-            
-            # Save to GCP Firestore if using GCP
-            if st.session_state.use_gcp:
-                save_to_firestore(result)
-            
-            # Store for feedback
-            st.session_state.current_result = result
-            st.session_state.current_product_info = product_info
-            
-            # Display results
-            display_results(result, product_info)
-            
-        except Exception as e:
-            st.error(f"Classification failed: {e}")
-            st.exception(e)
-
-def classify_with_gcp(product_info: Dict, search_depth: int) -> Dict:
-    """Classify using GCP backend"""
-    gcp = st.session_state.gcp_services
-    
-    # Search databases
-    search_query = f"{product_info['product_name']} {product_info['description']} {product_info['material']} {product_info['use']}".strip()
-    
-    hts_candidates = gcp['search_tools'].search_hts_database(search_query, top_k=search_depth)
-    cross_rulings = gcp['search_tools'].search_cross_rulings(search_query, top_k=3)
-    
-    # Classify using GCP Gemini
-    result = gcp['classifier'].classify_product(
-        product_info,
-        hts_candidates,
-        cross_rulings
-    )
-    
-    # Add search results to result
-    result['hts_candidates'] = hts_candidates
-    result['cross_rulings'] = cross_rulings
-    
-    return result
-
-def classify_with_local(product_info: Dict, enable_fallback: bool) -> Dict:
-    """Classify using local backend"""
-    result = st.session_state.agent.classify_product(product_info)
-    
-    # Check if fallback needed
-    if enable_fallback and result.get('confidence', '0%') == '0%':
-        st.info("Using AI fallback analysis...")
-        result = st.session_state.fallback.analyze_unknown_product(product_info)
-    
-    return result
-
-def save_to_firestore(result: Dict):
-    """Save classification to GCP Firestore"""
-    try:
-        db = st.session_state.gcp_services['firestore']
-        doc_ref = db.collection('classifications').document()
-        doc_ref.set(result)
-    except Exception as e:
-        st.warning(f"Could not save to Firestore: {e}")
+            with st.spinner("🤖 Analyzing product and applying GRI rules..."):
+                # Prepare product info
+                product_info = {
+                    'product_name': product_name,
+                    'description': description,
+                    'material': material,
+                    'use': use,
+                    'origin': origin
+                }
+                
+                # Classify
+                result = st.session_state.agent.classify_product(product_info)
+                
+                # Check if fallback needed
+                if enable_fallback and result.get('confidence', '0%') == '0%':
+                    st.warning("Product not found in database. Using AI fallback analysis...")
+                    result = st.session_state.fallback.analyze_unknown_product(product_info)
+                
+                # Add to history
+                result['timestamp'] = datetime.now().isoformat()
+                result['product_info'] = product_info
+                st.session_state.classification_history.append(result)
+                
+                # Store for feedback
+                st.session_state.current_result = result
+                st.session_state.current_product_info = product_info
+                
+                # Display results
+                display_results(result, product_info)
 
 def display_results(result, product_info):
     """Display classification results"""
     
     st.success("✅ Classification Complete!")
-    
-    # Show backend used
-    backend_badge = "GCP" if result.get('backend') == 'GCP' else "Local"
-    badge_class = "gcp-badge" if result.get('backend') == 'GCP' else "local-badge"
-    st.markdown(f'<span class="{badge_class}">Backend: {backend_badge}</span>', unsafe_allow_html=True)
-    
-    st.markdown("---")
     
     # Main result card
     st.subheader("Recommended HS Code")
@@ -535,26 +396,28 @@ def display_results(result, product_info):
         for alt in result['alternatives']:
             st.write(f"- `{alt}`")
     
-    # Database matches
+    # HTS Candidates
     if result.get('hts_candidates'):
         with st.expander("📊 HTS Database Matches"):
-            for i, candidate in enumerate(result['hts_candidates'][:5], 1):
-                st.markdown(f"**{i}. {candidate.get('hs_code', 'N/A')}**")
-                st.write(f"Description: {candidate.get('description', 'N/A')[:200]}...")
-                if 'relevance_score' in candidate:
-                    st.write(f"Relevance: {candidate['relevance_score']:.2f}")
+            for i, candidate in enumerate(result['hts_candidates'], 1):
+                st.markdown(f"**{i}. {candidate['hs_code']}** (Relevance: {candidate['relevance_score']:.2f})")
+                st.write(f"Description: {candidate['description']}")
+                st.write(f"Duty Rate: {candidate['duty_rate']}")
                 st.divider()
     
     # CROSS Rulings
     if result.get('cross_rulings'):
-        with st.expander("📚 CROSS Rulings"):
-            for ruling in result['cross_rulings'][:3]:
-                st.markdown(f"**{ruling.get('ruling_number', 'N/A')}**")
-                st.write(f"HS Code: `{ruling.get('hs_code', 'N/A')}`")
-                st.write(f"Description: {ruling.get('description', 'N/A')[:150]}...")
-                if 'url' in ruling:
-                    st.link_button("View Ruling", ruling['url'])
+        with st.expander("📚 Relevant CROSS Rulings"):
+            for ruling in result['cross_rulings']:
+                st.markdown(f"**{ruling['ruling_number']}** - {ruling['date']}")
+                st.write(f"HS Code: `{ruling['hs_code']}`")
+                st.write(f"Summary: {ruling['description'][:200]}...")
+                st.link_button("View Full Ruling", ruling['url'])
                 st.divider()
+    
+    # Warning for low confidence
+    if result.get('needs_review'):
+        st.warning("⚠️ **Low Confidence Detection**: This classification should be reviewed by a customs broker.")
     
     # Export options
     st.subheader("Export Classification Report")
@@ -562,6 +425,7 @@ def display_results(result, product_info):
     col1, col2 = st.columns(2)
     
     with col1:
+        # JSON export
         report_generator = ReportGenerator()
         json_report = report_generator.generate_json_report(result, product_info)
         
@@ -574,6 +438,7 @@ def display_results(result, product_info):
         )
     
     with col2:
+        # PDF export
         pdf_bytes = report_generator.generate_pdf_report(result, product_info)
         
         st.download_button(
@@ -591,7 +456,8 @@ def display_results(result, product_info):
 def display_feedback_section(result, product_info):
     """Display feedback collection interface"""
     st.subheader("📝 Help Us Improve")
-    st.write("Your feedback helps improve classification accuracy!")
+    
+    st.write("Your feedback helps improve classification accuracy for everyone!")
     
     col1, col2 = st.columns(2)
     
@@ -599,7 +465,7 @@ def display_feedback_section(result, product_info):
         was_correct = st.radio(
             "Was this classification correct?",
             options=[None, True, False],
-            format_func=lambda x: "Select..." if x is None else ("✅ Yes" if x else "❌ No"),
+            format_func=lambda x: "Select..." if x is None else ("✅ Yes, correct" if x else "❌ No, incorrect"),
             key="was_correct"
         )
     
@@ -615,28 +481,29 @@ def display_feedback_section(result, product_info):
     actual_code = None
     if was_correct == False:
         actual_code = st.text_input(
-            "Correct HS code?",
+            "What should the correct HS code be?",
             placeholder="e.g., 6203.42.40",
+            help="If you know the correct code, please share it",
             key="actual_code"
         )
     
     comments = st.text_area(
-        "Comments (optional)",
-        placeholder="Additional feedback...",
+        "Additional comments (optional)",
+        placeholder="Any other feedback about this classification...",
         key="comments",
-        height=80
+        height=100
     )
     
     if st.button("Submit Feedback", type="primary", key="submit_feedback"):
         if was_correct is None:
             st.warning("Please indicate if the classification was correct")
         else:
+            # Save feedback
             user_feedback = {
                 'rating': rating,
                 'was_correct': was_correct,
-                'actual_code': actual_code,
-                'comments': comments,
-                'backend': result.get('backend', 'Unknown')
+                'actual_code': actual_code if actual_code else None,
+                'comments': comments
             }
             
             classification_data = {
@@ -647,83 +514,541 @@ def display_feedback_section(result, product_info):
             }
             
             feedback_id = st.session_state.feedback_manager.add_feedback(classification_data, user_feedback)
-            st.success(f"Thank you for your feedback! (ID: {feedback_id})")
+            
+            st.success(f"✅ Thank you for your feedback! (ID: {feedback_id})")
 
 def show_duty_calculator_page():
-    """Duty calculator interface - keeping all existing functionality"""
+    """Duty calculator interface"""
     st.markdown('<div class="main-header">💰 Duty & Fee Calculator</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Calculate import duties and fees for your shipments</div>', unsafe_allow_html=True)
     
-    # [Rest of the duty calculator code from document 2 - unchanged]
-    st.info("Duty calculator implementation - keeping all existing features from your current app")
+    calculator = st.session_state.calculator
+    
+    # Get last classification if available
+    last_classification = st.session_state.classification_history[-1] if st.session_state.classification_history else None
+    
+    # Tabs for different calculation methods
+    tab1, tab2, tab3 = st.tabs(["💵 Simple Calculator", "📄 Invoice-Based", "⚖️ Rate Comparison"])
+    
+    with tab1:
+        st.subheader("Simple Duty Calculator")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            customs_value = st.number_input(
+                "Customs Value (USD)",
+                min_value=0.0,
+                value=10000.0,
+                step=100.0,
+                help="Total value of goods (CIF: Cost + Insurance + Freight)",
+                key="simple_customs_value"
+            )
+            
+            # Pre-fill duty rate if classification was done
+            default_rate = "0%"
+            if last_classification and 'duty_rate' in last_classification:
+                default_rate = last_classification['duty_rate']
+            
+            duty_rate = st.text_input(
+                "Duty Rate",
+                value=default_rate,
+                help="Enter rate from HTS (e.g., '5.5%' or 'Free')",
+                key="simple_duty_rate"
+            )
+        
+        with col2:
+            shipping_method = st.selectbox(
+                "Shipping Method",
+                options=["sea", "air"],
+                help="Affects Harbor Maintenance Fee calculation",
+                key="simple_shipping"
+            )
+            
+            include_mpf = st.checkbox("Include MPF (Merchandise Processing Fee)", value=True, key="simple_mpf")
+            include_hmf = st.checkbox("Include HMF (Harbor Maintenance Fee)", value=True, key="simple_hmf")
+        
+        if st.button("Calculate Duties", key="simple_calc", type="primary"):
+            result = calculator.calculate_duties(
+                customs_value=customs_value,
+                duty_rate=duty_rate,
+                shipping_method=shipping_method,
+                include_mpf=include_mpf,
+                include_hmf=include_hmf
+            )
+            
+            display_duty_results(result, calculator)
+    
+    with tab2:
+        st.subheader("Calculate from Invoice")
+        st.write("Enter individual cost components to calculate CIF value automatically")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            fob_value = st.number_input(
+                "FOB Value (Product Cost)",
+                min_value=0.0,
+                value=8000.0,
+                step=100.0,
+                help="Free on Board - the cost of goods",
+                key="invoice_fob"
+            )
+            
+            freight_cost = st.number_input(
+                "Freight Cost",
+                min_value=0.0,
+                value=1500.0,
+                step=50.0,
+                help="International shipping cost",
+                key="invoice_freight"
+            )
+            
+            insurance_cost = st.number_input(
+                "Insurance Cost",
+                min_value=0.0,
+                value=500.0,
+                step=50.0,
+                help="Cargo insurance cost",
+                key="invoice_insurance"
+            )
+        
+        with col2:
+            duty_rate_invoice = st.text_input(
+                "Duty Rate",
+                value="5.5%",
+                key="duty_rate_invoice",
+                help="Enter rate from HTS"
+            )
+            
+            shipping_method_invoice = st.selectbox(
+                "Shipping Method",
+                options=["sea", "air"],
+                key="shipping_method_invoice"
+            )
+            
+            # Show CIF calculation
+            cif_preview = fob_value + freight_cost + insurance_cost
+            st.metric("CIF Value (Calculated)", f"${cif_preview:,.2f}")
+        
+        if st.button("Calculate from Invoice", key="invoice_calc", type="primary"):
+            result = calculator.calculate_from_invoice(
+                fob_value=fob_value,
+                freight_cost=freight_cost,
+                insurance_cost=insurance_cost,
+                duty_rate=duty_rate_invoice,
+                shipping_method=shipping_method_invoice
+            )
+            
+            # Show invoice breakdown
+            st.subheader("Invoice Breakdown")
+            inv_col1, inv_col2, inv_col3, inv_col4 = st.columns(4)
+            
+            inv = result['invoice_breakdown']
+            inv_col1.metric("FOB Value", f"${inv['fob_value']:,.2f}")
+            inv_col2.metric("Freight", f"${inv['freight_cost']:,.2f}")
+            inv_col3.metric("Insurance", f"${inv['insurance_cost']:,.2f}")
+            inv_col4.metric("CIF Value", f"${inv['cif_value']:,.2f}")
+            
+            display_duty_results(result, calculator)
+    
+    with tab3:
+        st.subheader("Compare Standard vs Preferential Rates")
+        st.write("Compare duties under normal rates vs Free Trade Agreements")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            comp_value = st.number_input(
+                "Customs Value (USD)",
+                min_value=0.0,
+                value=10000.0,
+                step=100.0,
+                key="comp_value"
+            )
+            
+            standard_rate = st.text_input(
+                "Standard Duty Rate",
+                value="6.5%",
+                help="Normal HTS rate",
+                key="standard_rate"
+            )
+        
+        with col2:
+            program = st.selectbox(
+                "Preferential Program",
+                options=[
+                    "USMCA (US-Mexico-Canada)",
+                    "GSP (Generalized System of Preferences)",
+                    "CAFTA-DR",
+                    "Other FTA"
+                ],
+                key="program"
+            )
+            
+            preferential_rate = st.text_input(
+                "Preferential Rate",
+                value="Free",
+                help="Rate under the trade agreement",
+                key="pref_rate"
+            )
+        
+        if st.button("Compare Rates", key="compare_calc", type="primary"):
+            comparison = calculator.compare_rates(
+                customs_value=comp_value,
+                standard_rate=standard_rate,
+                preferential_rate=preferential_rate,
+                program_name=program
+            )
+            
+            st.subheader("Comparison Results")
+            
+            comp_col1, comp_col2, comp_col3 = st.columns(3)
+            
+            with comp_col1:
+                st.metric(
+                    "Standard Duties",
+                    f"${comparison['standard']['total_duties_and_fees']:,.2f}"
+                )
+            
+            with comp_col2:
+                st.metric(
+                    f"{program} Duties",
+                    f"${comparison['preferential']['total_duties_and_fees']:,.2f}"
+                )
+            
+            with comp_col3:
+                st.metric(
+                    "Your Savings",
+                    f"${comparison['savings']:,.2f}",
+                    f"{comparison['savings_percent']:.1f}%"
+                )
+            
+            if comparison['savings'] > 0:
+                st.success(f"💰 You save ${comparison['savings']:,.2f} by using {program}!")
+            else:
+                st.info("No savings with preferential rate")
+    
+    # Educational content
+    with st.expander("ℹ️ Understanding Import Duties & Fees"):
+        st.markdown("""
+        ### What's Included in Total Landed Cost?
+        
+        **1. Base Duty**
+        - Tariff rate from the HTS
+        - Varies by product and country of origin
+        - Can be reduced or eliminated with FTAs
+        
+        **2. MPF (Merchandise Processing Fee)**
+        - 0.3464% of customs value
+        - Minimum: $27.75
+        - Maximum: $538.40
+        - Applies to most imports
+        
+        **3. HMF (Harbor Maintenance Fee)**
+        - 0.125% of customs value
+        - Only for sea shipments
+        - Not applicable to air cargo
+        
+        ### CIF Value
+        Cost + Insurance + Freight = basis for duty calculation
+        
+        ### Preferential Programs
+        - **USMCA**: US-Mexico-Canada Agreement
+        - **GSP**: Developing countries preference
+        - **FTAs**: Various free trade agreements
+        
+        Always verify current rates with CBP or a licensed broker.
+        """)
+
+def display_duty_results(result, calculator):
+    """Display duty calculation results"""
+    st.markdown("---")
+    st.subheader("💵 Calculation Results")
+    
+    # Key metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    col1.metric(
+        "Customs Value",
+        calculator.format_currency(result['customs_value'])
+    )
+    
+    col2.metric(
+        "Total Duties & Fees",
+        calculator.format_currency(result['total_duties_and_fees'])
+    )
+    
+    col3.metric(
+        "Total Landed Cost",
+        calculator.format_currency(result['total_landed_cost'])
+    )
+    
+    col4.metric(
+        "Effective Rate",
+        f"{result['effective_duty_rate']:.2f}%"
+    )
+    
+    # Detailed breakdown
+    st.subheader("Fee Breakdown")
+    
+    breakdown_df = {
+        "Fee Type": ["Base Duty", "MPF", "HMF"],
+        "Amount": [
+            calculator.format_currency(result['base_duty']),
+            calculator.format_currency(result['mpf']),
+            calculator.format_currency(result['hmf'])
+        ],
+        "Rate": [
+            result['duty_rate_applied'],
+            f"{calculator.MPF_RATE*100:.4f}%",
+            f"{calculator.HMF_RATE*100:.3f}%"
+        ]
+    }
+    
+    st.table(breakdown_df)
+    
+    # Download option
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📥 Download Calculation (JSON)", key="download_calc"):
+            json_str = json.dumps(result, indent=2)
+            st.download_button(
+                label="Download",
+                data=json_str,
+                file_name=f"duty_calculation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                key="download_calc_btn"
+            )
 
 def show_analytics_page():
-    """Analytics dashboard - keeping all existing functionality"""
-    st.markdown('<div class="main-header">📊 Classification Analytics</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sub-header">Track performance across backends</div>', unsafe_allow_html=True)
+    """Analytics dashboard"""
+    st.markdown('<div class="main-header">📊 Classification Analytics Dashboard</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sub-header">Track performance and improve accuracy over time</div>', unsafe_allow_html=True)
     
-    # [Rest of the analytics code from document 2 - with additions to track by backend]
-    st.info("Analytics implementation - enhanced to show GCP vs Local performance")
+    # Initialize analytics
+    feedback_manager = st.session_state.feedback_manager
+    analytics = AnalyticsEngine(feedback_manager)
+    
+    # Check if there's any data
+    if feedback_manager.get_all_feedback().empty:
+        st.info("📭 No feedback data yet. Start classifying products and collecting feedback to see analytics!")
+        
+        st.markdown("### Get Started")
+        st.write("1. Go to the Classifier page")
+        st.write("2. Classify some products")
+        st.write("3. Provide feedback on the results")
+        st.write("4. Return here to see insights!")
+        return
+    
+    # Overview metrics
+    st.header("Overview")
+    stats = analytics.get_overview_stats()
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "Total Classifications",
+            f"{stats['total_classifications']:,}"
+        )
+    
+    with col2:
+        st.metric(
+            "Accuracy Rate",
+            f"{stats['accuracy_rate']:.1f}%"
+        )
+    
+    with col3:
+        st.metric(
+            "Avg Confidence",
+            f"{stats['avg_confidence']:.1f}%"
+        )
+    
+    with col4:
+        st.metric(
+            "Feedback Received",
+            f"{stats['total_feedback']:,}"
+        )
+    
+    st.markdown("---")
+    
+    # Visualizations
+    st.header("Performance Analysis")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        conf_fig = analytics.get_confidence_distribution()
+        if conf_fig:
+            st.plotly_chart(conf_fig, use_container_width=True)
+    
+    with col2:
+        acc_conf_fig = analytics.get_accuracy_by_confidence()
+        if acc_conf_fig:
+            st.plotly_chart(acc_conf_fig, use_container_width=True)
+    
+    # Rating distribution
+    rating_fig = analytics.get_rating_distribution()
+    if rating_fig:
+        st.plotly_chart(rating_fig, use_container_width=True)
+    
+    # Trends over time
+    st.header("Usage Trends")
+    trend_fig = analytics.get_classification_trends()
+    if trend_fig:
+        st.plotly_chart(trend_fig, use_container_width=True)
+    
+    # Top HS codes
+    st.header("Most Common Classifications")
+    top_codes_fig = analytics.get_top_hs_codes(limit=15)
+    if top_codes_fig:
+        st.plotly_chart(top_codes_fig, use_container_width=True)
+    
+    # Misclassification report
+    st.header("⚠️ Misclassification Report")
+    misclass_report = analytics.get_misclassification_report()
+    
+    if misclass_report is not None and not misclass_report.empty:
+        st.write(f"Found {len(misclass_report)} misclassifications")
+        
+        st.dataframe(
+            misclass_report,
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        # Export option
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📥 Export Training Data", key="export_training"):
+                output_file = feedback_manager.export_training_data()
+                st.success(f"Training data exported to: {output_file}")
+                st.info("Use this data to retrain or fine-tune your classification model")
+    else:
+        st.success("🎉 No misclassifications reported yet!")
+    
+    # Download feedback data
+    st.markdown("---")
+    st.subheader("Export Data")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        df = feedback_manager.get_all_feedback()
+        if not df.empty:
+            st.download_button(
+                label="📥 Download All Feedback (JSON)",
+                data=df.to_json(orient='records', indent=2),
+                file_name=f"feedback_data_{datetime.now().strftime('%Y%m%d')}.json",
+                mime="application/json",
+                key="download_json"
+            )
+    
+    with col2:
+        if not df.empty:
+            st.download_button(
+                label="📥 Download All Feedback (CSV)",
+                data=df.to_csv(index=False),
+                file_name=f"feedback_data_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv",
+                key="download_csv"
+            )
 
 def show_about_page():
-    """About page with GCP integration info"""
-    st.markdown('<div class="main-header">📚 About HS Code Classifier Pro</div>', unsafe_allow_html=True)
+    """About page"""
+    st.markdown('<div class="main-header">📚 About HS Code Classifier</div>', unsafe_allow_html=True)
     
     st.markdown("""
-    ## Dual-Backend AI Classification System
+    ## AI-Powered Customs Classification System
     
-    This advanced tool supports both **Google Cloud Platform** and **Local** backends for 
-    maximum flexibility and reliability.
-    
-    ### Backend Options
-    
-    **🔵 GCP Mode (When Available)**
-    - Vertex AI Gemini classification
-    - Cloud Firestore storage
-    - Vertex AI Vector Search
-    - Scalable cloud infrastructure
-    
-    **⚫ Local Mode**
-    - Local AI models
-    - File-based storage
-    - Full offline capability
-    - Fast response times
+    This advanced tool leverages artificial intelligence to classify products according to the 
+    U.S. Harmonized Tariff Schedule (HTSUS), helping importers, exporters, and customs brokers 
+    streamline the classification process.
     
     ### Core Features
     
-    - ✅ AI-powered classification
-    - ✅ Auto-fill product details
-    - ✅ Image analysis
-    - ✅ Duty calculator
-    - ✅ Analytics dashboard
-    - ✅ Feedback system
-    - ✅ PDF/JSON reports
-    - ✅ Multi-backend support
+    - **AI Classification**: Google Gemini-powered intelligent code assignment
+    - **AI Auto-Fill**: Automatically generate detailed product descriptions
+    - **Image Analysis**: Extract product details from photos using computer vision
+    - **Vector Search**: Semantic search through complete HTSUS database (99 chapters)
+    - **CROSS Integration**: References CBP ruling precedents
+    - **GRI Application**: Applies General Rules of Interpretation
+    - **Confidence Scoring**: Transparent confidence metrics
+    - **Feedback Loop**: Continuous learning from user input
+    - **Advanced Analytics**: Track performance over time
+    - **Duty Calculator**: Estimate import costs and fees
+    
+    ### How It Works
+    
+    1. **Input**: Enter product name or upload image
+    2. **Auto-Fill/Image Analysis**: AI generates detailed information
+    3. **Vector Search**: Semantic matching with 768-dimensional embeddings
+    4. **AI Analysis**: Gemini evaluates matches and applies GRI
+    5. **Classification**: Receives HS code with reasoning
+    6. **Feedback**: System learns from your corrections
     
     ### Technology Stack
     
-    **Cloud:**
-    - Google Cloud Vertex AI
-    - Firestore Database
-    - Cloud Storage
+    - **AI Model**: Google Gemini 2.5 Flash
+    - **Embeddings**: all-mpnet-base-v2 (768 dimensions)
+    - **Vector DB**: Pinecone
+    - **Framework**: LangChain
+    - **UI**: Streamlit
     
-    **Local:**
-    - LangChain
-    - Pinecone Vector DB
-    - Streamlit
+    ### Important Disclaimers
     
-    **AI Models:**
-    - Gemini 2.5 Flash (GCP)
-    - Custom LLM (Local)
-    - all-mpnet-base-v2 embeddings
+    ⚠️ **This tool is for informational purposes only**
+    
+    - Not a substitute for professional customs brokers
+    - Final classification must be confirmed with U.S. Customs & Border Protection (CBP)
+    - Duty rates are subject to change
+    - Complex products may require manual review
+    - Users remain responsible for accurate classification
+    
+    ### Accuracy & Limitations
+    
+    - **Estimated Accuracy**: 85-90% on standard products
+    - **Best For**: Common consumer goods, textiles, electronics
+    - **Limitations**: Complex machinery, chemicals, food products may need expert review
+    
+    ### Data Sources
+    
+    - HTSUS official database (all 99 chapters)
+    - CBP CROSS ruling database
+    - Updated: January 2025
+    
+    ### Support & Resources
+    
+    - **U.S. Customs**: https://www.cbp.gov
+    - **Official HTSUS**: https://hts.usitc.gov
+    - **CROSS Rulings**: https://rulings.cbp.gov
+    
+    ### Version Information
+    
+    - **Version**: 1.0.0
+    - **Last Updated**: October 2025
+    - **Model**: Gemini 2.5 Flash
+    - **Embedding Model**: all-mpnet-base-v2
     
     ---
     
-    **Version**: 2.0.0 - Multi-Backend Support
-    
-    **Disclaimer**: For informational purposes only. Final classification 
-    must be confirmed with CBP.
+    **Questions or Issues?** Contact your development team or system administrator.
     """)
+    
+    # Usage statistics
+    if st.session_state.classification_history:
+        st.subheader("Your Usage Statistics")
+        col1, col2, col3 = st.columns(3)
+        
+        col1.metric("Total Classifications", len(st.session_state.classification_history))
+        
+        feedback_df = st.session_state.feedback_manager.get_all_feedback()
+        if not feedback_df.empty:
+            col2.metric("Feedback Given", len(feedback_df))
+            accuracy_stats = st.session_state.feedback_manager.get_accuracy_stats()
+            if accuracy_stats:
+                col3.metric("Your Accuracy", f"{accuracy_stats['accuracy']:.1f}%")
 
 if __name__ == "__main__":
     main()
