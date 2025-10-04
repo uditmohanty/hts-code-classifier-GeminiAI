@@ -71,6 +71,14 @@ if 'agent' not in st.session_state:
             st.error(f"Failed to initialize components: {str(e)}")
             st.session_state.init_success = False
 
+# Initialize form field values in session state
+if 'form_material' not in st.session_state:
+    st.session_state.form_material = ""
+if 'form_description' not in st.session_state:
+    st.session_state.form_description = ""
+if 'form_use' not in st.session_state:
+    st.session_state.form_use = ""
+
 def main():
     """Main application entry point"""
     
@@ -137,6 +145,12 @@ def show_classifier_page():
     # Input section
     st.subheader("Product Information")
     
+    # Initialize session state for auto-filled values
+    if 'auto_filled_data' not in st.session_state:
+        st.session_state.auto_filled_data = None
+    if 'image_analysis' not in st.session_state:
+        st.session_state.image_analysis = None
+    
     # Product name with auto-fill option
     col1, col2 = st.columns([3, 1])
     
@@ -151,16 +165,10 @@ def show_classifier_page():
     with col2:
         st.write("")  # Spacing
         st.write("")  # Spacing
-        auto_fill = st.button("🤖 Auto-Fill", type="secondary", use_container_width=True)
-    
-    # Initialize session state for auto-filled values
-    if 'auto_filled_data' not in st.session_state:
-        st.session_state.auto_filled_data = None
-    if 'image_analysis' not in st.session_state:
-        st.session_state.image_analysis = None
+        auto_fill_clicked = st.button("🤖 Auto-Fill", type="secondary", use_container_width=True)
     
     # Handle auto-fill
-    if auto_fill:
+    if auto_fill_clicked:
         if not product_name:
             st.warning("⚠️ Please enter a product name first")
         else:
@@ -169,7 +177,12 @@ def show_classifier_page():
                     enhanced_data = st.session_state.enhancer.enhance_product_info(product_name)
                     
                     if enhanced_data['success']:
+                        # Update the form field values in session state
+                        st.session_state.form_description = enhanced_data.get('description', '')
+                        st.session_state.form_material = enhanced_data.get('material', '')
+                        st.session_state.form_use = enhanced_data.get('intended_use', '')
                         st.session_state.auto_filled_data = enhanced_data
+                        
                         model_used = enhanced_data.get('model_used', 'AI')
                         st.success(f"✨ Details auto-generated using {model_used}! Review and edit if needed.")
                         st.rerun()
@@ -177,7 +190,6 @@ def show_classifier_page():
                         error_msg = enhanced_data.get('error', 'Unknown error')
                         st.error(f"❌ Failed to auto-generate: {error_msg}")
                         
-                        # Show debug info in expander
                         with st.expander("🔧 Debug Information"):
                             st.json(enhanced_data)
                             st.info("Tips: Check your API key and internet connection")
@@ -186,16 +198,6 @@ def show_classifier_page():
                     with st.expander("🔧 Full Error Details"):
                         import traceback
                         st.code(traceback.format_exc())
-    
-    # Get values (either auto-filled or empty)
-    default_description = ""
-    default_material = ""
-    default_use = ""
-    
-    if st.session_state.auto_filled_data:
-        default_description = st.session_state.auto_filled_data.get('description', '')
-        default_material = st.session_state.auto_filled_data.get('material', '')
-        default_use = st.session_state.auto_filled_data.get('intended_use', '')
     
     # Show auto-fill banner if data exists
     if st.session_state.auto_filled_data:
@@ -209,10 +211,11 @@ def show_classifier_page():
     with col1:
         material = st.text_input(
             "Material/Composition",
-            value=default_material,
+            value=st.session_state.form_material,
             placeholder="e.g., 100% Cotton, Stainless Steel",
             help="What is the product made of?",
-            key="material_input"
+            key="material_input",
+            on_change=lambda: setattr(st.session_state, 'form_material', st.session_state.material_input)
         )
         
         origin = st.text_input(
@@ -225,25 +228,30 @@ def show_classifier_page():
     with col2:
         description = st.text_area(
             "Detailed Description *",
-            value=default_description,
+            value=st.session_state.form_description,
             placeholder="Enter product features, size, style, function...",
             height=100,
             help="Provide as much detail as possible. Use Auto-Fill for AI assistance!",
-            key="description_input"
+            key="description_input",
+            on_change=lambda: setattr(st.session_state, 'form_description', st.session_state.description_input)
         )
         
         use = st.text_input(
             "Intended Use",
-            value=default_use,
+            value=st.session_state.form_use,
             placeholder="e.g., Office lighting, Casual wear",
             help="What is this product used for?",
-            key="use_input"
+            key="use_input",
+            on_change=lambda: setattr(st.session_state, 'form_use', st.session_state.use_input)
         )
     
     # Clear auto-fill button
     if st.session_state.auto_filled_data:
         if st.button("🔄 Clear Auto-Fill", key="clear_autofill"):
             st.session_state.auto_filled_data = None
+            st.session_state.form_description = ""
+            st.session_state.form_material = ""
+            st.session_state.form_use = ""
             st.rerun()
     
     # Image upload with analysis
@@ -308,6 +316,10 @@ def show_classifier_page():
         # Button to use image analysis
         if st.session_state.image_analysis and st.session_state.image_analysis['success']:
             if st.button("📝 Use Image Data to Fill Form", type="primary", key="use_image_data"):
+                # Update form field values
+                st.session_state.form_description = st.session_state.image_analysis['description']
+                st.session_state.form_material = st.session_state.image_analysis['material']
+                st.session_state.form_use = st.session_state.image_analysis['intended_use']
                 st.session_state.auto_filled_data = {
                     'enhanced_name': st.session_state.image_analysis['product_name'],
                     'description': st.session_state.image_analysis['description'],
@@ -335,17 +347,18 @@ def show_classifier_page():
         classify_button = st.button("🔍 Classify Product", type="primary", use_container_width=True)
     
     if classify_button:
-        if not product_name or not description:
+        # Use the current form values
+        if not product_name or not st.session_state.form_description:
             st.error("⚠️ Please enter at least Product Name and Description")
         else:
             with st.spinner("🤖 Analyzing product and applying GRI rules..."):
                 try:
-                    # Prepare product info
+                    # Prepare product info with current form values
                     product_info = {
                         'product_name': product_name,
-                        'description': description,
-                        'material': material,
-                        'use': use,
+                        'description': st.session_state.form_description,
+                        'material': st.session_state.form_material,
+                        'use': st.session_state.form_use,
                         'origin': origin
                     }
                     
