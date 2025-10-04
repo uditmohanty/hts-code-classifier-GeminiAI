@@ -89,11 +89,17 @@ def clear_form():
     st.session_state.auto_filled_data = None
     st.session_state.image_analysis = None
     st.session_state.classification_complete = False
-    # Clear input fields by resetting their session state keys
+    # Don't delete the keys, just clear them
     if 'product_name_input' in st.session_state:
-        del st.session_state.product_name_input
+        st.session_state.product_name_input = ""
     if 'origin_input' in st.session_state:
-        del st.session_state.origin_input
+        st.session_state.origin_input = ""
+    if 'material_input' in st.session_state:
+        st.session_state.material_input = ""
+    if 'description_input' in st.session_state:
+        st.session_state.description_input = ""
+    if 'use_input' in st.session_state:
+        st.session_state.use_input = ""
 
 def main():
     """Main application entry point"""
@@ -183,6 +189,7 @@ def show_classifier_page():
     with col1:
         product_name = st.text_input(
             "Product Name *",
+            value=st.session_state.get('product_name_input', ''),
             placeholder="e.g., LED desk lamp, Men's Cotton T-Shirt",
             help="Enter the product name - AI can auto-fill the rest",
             key="product_name_input"
@@ -191,45 +198,45 @@ def show_classifier_page():
     with col2:
         st.write("")  # Spacing
         st.write("")  # Spacing
-        # Use a unique key for auto-fill button to avoid state issues
         auto_fill_clicked = st.button(
             "🤖 Auto-Fill", 
             type="secondary", 
             use_container_width=True,
-            key=f"auto_fill_{datetime.now().timestamp()}"
+            key="auto_fill_btn",
+            disabled=not product_name  # Disable if no product name
         )
     
     # Handle auto-fill
-    if auto_fill_clicked:
-        if not product_name:
-            st.warning("⚠️ Please enter a product name first")
-        else:
-            with st.spinner("🤖 AI is analyzing and generating detailed product information..."):
-                try:
-                    enhanced_data = st.session_state.enhancer.enhance_product_info(product_name)
+    if auto_fill_clicked and product_name:
+        with st.spinner("🤖 AI is analyzing and generating detailed product information..."):
+            try:
+                # Debug info
+                # st.write(f"Debug: Calling enhancer with: {product_name}")
+                
+                enhanced_data = st.session_state.enhancer.enhance_product_info(product_name)
+                
+                if enhanced_data and enhanced_data.get('success', False):
+                    # Update the form field values in session state
+                    st.session_state.form_description = enhanced_data.get('description', '')
+                    st.session_state.form_material = enhanced_data.get('material', '')
+                    st.session_state.form_use = enhanced_data.get('intended_use', '')
+                    st.session_state.auto_filled_data = enhanced_data
                     
-                    if enhanced_data['success']:
-                        # Update the form field values in session state
-                        st.session_state.form_description = enhanced_data.get('description', '')
-                        st.session_state.form_material = enhanced_data.get('material', '')
-                        st.session_state.form_use = enhanced_data.get('intended_use', '')
-                        st.session_state.auto_filled_data = enhanced_data
-                        
-                        model_used = enhanced_data.get('model_used', 'AI')
-                        st.success(f"✨ Details auto-generated using {model_used}! Review and edit if needed.")
-                        st.rerun()
-                    else:
-                        error_msg = enhanced_data.get('error', 'Unknown error')
-                        st.error(f"❌ Failed to auto-generate: {error_msg}")
-                        
-                        with st.expander("🔧 Debug Information"):
-                            st.json(enhanced_data)
-                            st.info("Tips: Check your API key and internet connection")
-                except Exception as e:
-                    st.error(f"❌ Exception occurred: {str(e)}")
-                    with st.expander("🔧 Full Error Details"):
-                        import traceback
-                        st.code(traceback.format_exc())
+                    model_used = enhanced_data.get('model_used', 'AI')
+                    st.success(f"✨ Details auto-generated using {model_used}! Review and edit if needed.")
+                    st.rerun()
+                else:
+                    error_msg = enhanced_data.get('error', 'Unknown error') if enhanced_data else 'No response from AI'
+                    st.error(f"❌ Failed to auto-generate: {error_msg}")
+                    
+                    with st.expander("🔧 Debug Information"):
+                        st.json(enhanced_data if enhanced_data else {"error": "No response"})
+                        st.info("Tips: Check your API key and internet connection")
+            except Exception as e:
+                st.error(f"❌ Exception occurred: {str(e)}")
+                with st.expander("🔧 Full Error Details"):
+                    import traceback
+                    st.code(traceback.format_exc())
     
     # Show auto-fill banner if data exists
     if st.session_state.auto_filled_data and not st.session_state.classification_complete:
