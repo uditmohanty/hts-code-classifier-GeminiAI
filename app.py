@@ -59,12 +59,17 @@ if 'classification_history' not in st.session_state:
     st.session_state.classification_history = []
 if 'agent' not in st.session_state:
     with st.spinner("Initializing AI Agent..."):
-        st.session_state.agent = HSCodeAgent()
-        st.session_state.fallback = FallbackAnalyzer()
-        st.session_state.feedback_manager = FeedbackManager()
-        st.session_state.calculator = DutyCalculator()
-        st.session_state.enhancer = ProductEnhancer()
-        st.session_state.image_analyzer = ImageAnalyzer()
+        try:
+            st.session_state.agent = HSCodeAgent()
+            st.session_state.fallback = FallbackAnalyzer()
+            st.session_state.feedback_manager = FeedbackManager()
+            st.session_state.calculator = DutyCalculator()
+            st.session_state.enhancer = ProductEnhancer()
+            st.session_state.image_analyzer = ImageAnalyzer()
+            st.session_state.init_success = True
+        except Exception as e:
+            st.error(f"Failed to initialize components: {str(e)}")
+            st.session_state.init_success = False
 
 def main():
     """Main application entry point"""
@@ -100,8 +105,18 @@ def main():
         else:
             st.info("No classifications yet")
         
+        # Show model status
+        if hasattr(st.session_state, 'enhancer'):
+            st.markdown("---")
+            st.caption(f"AI Model: {getattr(st.session_state.enhancer, 'model_name', 'Not initialized')}")
+        
         st.markdown("---")
         st.caption("v1.0.0 | AI-Powered Classification")
+    
+    # Check initialization
+    if not st.session_state.get('init_success', False):
+        st.error("⚠️ System initialization failed. Please check your API keys and configuration.")
+        st.stop()
     
     # Route to pages
     if page == "🔍 Classifier":
@@ -128,7 +143,7 @@ def show_classifier_page():
     with col1:
         product_name = st.text_input(
             "Product Name *",
-            placeholder="e.g., Men's Cotton T-Shirt",
+            placeholder="e.g., LED desk lamp, Men's Cotton T-Shirt",
             help="Enter the product name - AI can auto-fill the rest",
             key="product_name_input"
         )
@@ -150,14 +165,27 @@ def show_classifier_page():
             st.warning("⚠️ Please enter a product name first")
         else:
             with st.spinner("🤖 AI is analyzing and generating detailed product information..."):
-                enhanced_data = st.session_state.enhancer.enhance_product_info(product_name)
-                
-                if enhanced_data['success']:
-                    st.session_state.auto_filled_data = enhanced_data
-                    st.success("✨ Details auto-generated! Review and edit if needed.")
-                    st.rerun()  # FIXED: Added rerun to update form fields
-                else:
-                    st.error(f"❌ Failed to auto-generate: {enhanced_data.get('error')}")
+                try:
+                    enhanced_data = st.session_state.enhancer.enhance_product_info(product_name)
+                    
+                    if enhanced_data['success']:
+                        st.session_state.auto_filled_data = enhanced_data
+                        model_used = enhanced_data.get('model_used', 'AI')
+                        st.success(f"✨ Details auto-generated using {model_used}! Review and edit if needed.")
+                        st.rerun()
+                    else:
+                        error_msg = enhanced_data.get('error', 'Unknown error')
+                        st.error(f"❌ Failed to auto-generate: {error_msg}")
+                        
+                        # Show debug info in expander
+                        with st.expander("🔧 Debug Information"):
+                            st.json(enhanced_data)
+                            st.info("Tips: Check your API key and internet connection")
+                except Exception as e:
+                    st.error(f"❌ Exception occurred: {str(e)}")
+                    with st.expander("🔧 Full Error Details"):
+                        import traceback
+                        st.code(traceback.format_exc())
     
     # Get values (either auto-filled or empty)
     default_description = ""
@@ -171,7 +199,9 @@ def show_classifier_page():
     
     # Show auto-fill banner if data exists
     if st.session_state.auto_filled_data:
-        st.success("✨ Details auto-generated! Review and edit if needed.")
+        model_info = st.session_state.auto_filled_data.get('model_used', '')
+        if model_info:
+            st.info(f"✨ Using AI Model: {model_info}")
     
     # Rest of the form
     col1, col2 = st.columns(2)
@@ -180,14 +210,14 @@ def show_classifier_page():
         material = st.text_input(
             "Material/Composition",
             value=default_material,
-            placeholder="e.g., 100% Cotton",
+            placeholder="e.g., 100% Cotton, Stainless Steel",
             help="What is the product made of?",
             key="material_input"
         )
         
         origin = st.text_input(
             "Country of Origin",
-            placeholder="e.g., Bangladesh",
+            placeholder="e.g., China, Bangladesh, Vietnam",
             help="Where is the product manufactured?",
             key="origin_input"
         )
@@ -205,7 +235,7 @@ def show_classifier_page():
         use = st.text_input(
             "Intended Use",
             value=default_use,
-            placeholder="e.g., Casual wear",
+            placeholder="e.g., Office lighting, Casual wear",
             help="What is this product used for?",
             key="use_input"
         )
@@ -231,7 +261,7 @@ def show_classifier_page():
         col1, col2 = st.columns([2, 1])
         
         with col1:
-            st.image(uploaded_file, caption="Uploaded Product Image", use_column_width=True)
+            st.image(uploaded_file, caption="Uploaded Product Image", use_container_width=True)
         
         with col2:
             st.write("")
@@ -241,36 +271,39 @@ def show_classifier_page():
         # Handle image analysis
         if analyze_image:
             with st.spinner("🖼️ AI is analyzing the product image..."):
-                # Save uploaded file temporarily
-                with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
-                    tmp_file.write(uploaded_file.getvalue())
-                    tmp_path = tmp_file.name
-                
-                # Analyze image
-                image_result = st.session_state.image_analyzer.analyze_product_image(tmp_path)
-                
-                # Clean up temp file
-                os.unlink(tmp_path)
-                
-                if image_result['success']:
-                    st.success("✅ Image analyzed successfully!")
+                try:
+                    # Save uploaded file temporarily
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
+                        tmp_file.write(uploaded_file.getvalue())
+                        tmp_path = tmp_file.name
                     
-                    # Store results
-                    st.session_state.image_analysis = image_result
+                    # Analyze image
+                    image_result = st.session_state.image_analyzer.analyze_product_image(tmp_path)
                     
-                    # Display analysis
-                    with st.expander("📋 Image Analysis Results", expanded=True):
-                        st.write(f"**Product Identified:** {image_result['product_name']}")
-                        st.write(f"**Material:** {image_result['material']}")
-                        st.write(f"**Construction:** {image_result['construction']}")
-                        st.write(f"**Description:** {image_result['description']}")
-                        if image_result['features']:
-                            st.write(f"**Features:** {', '.join(image_result['features'])}")
-                        st.write(f"**Intended Use:** {image_result['intended_use']}")
-                        if image_result['additional_notes']:
-                            st.write(f"**Notes:** {image_result['additional_notes']}")
-                else:
-                    st.error(f"❌ Failed to analyze image: {image_result.get('error')}")
+                    # Clean up temp file
+                    os.unlink(tmp_path)
+                    
+                    if image_result['success']:
+                        st.success("✅ Image analyzed successfully!")
+                        
+                        # Store results
+                        st.session_state.image_analysis = image_result
+                        
+                        # Display analysis
+                        with st.expander("📋 Image Analysis Results", expanded=True):
+                            st.write(f"**Product Identified:** {image_result['product_name']}")
+                            st.write(f"**Material:** {image_result['material']}")
+                            st.write(f"**Construction:** {image_result['construction']}")
+                            st.write(f"**Description:** {image_result['description']}")
+                            if image_result.get('features'):
+                                st.write(f"**Features:** {', '.join(image_result['features'])}")
+                            st.write(f"**Intended Use:** {image_result['intended_use']}")
+                            if image_result.get('additional_notes'):
+                                st.write(f"**Notes:** {image_result['additional_notes']}")
+                    else:
+                        st.error(f"❌ Failed to analyze image: {image_result.get('error')}")
+                except Exception as e:
+                    st.error(f"❌ Image analysis error: {str(e)}")
         
         # Button to use image analysis
         if st.session_state.image_analysis and st.session_state.image_analysis['success']:
@@ -306,34 +339,41 @@ def show_classifier_page():
             st.error("⚠️ Please enter at least Product Name and Description")
         else:
             with st.spinner("🤖 Analyzing product and applying GRI rules..."):
-                # Prepare product info
-                product_info = {
-                    'product_name': product_name,
-                    'description': description,
-                    'material': material,
-                    'use': use,
-                    'origin': origin
-                }
-                
-                # Classify
-                result = st.session_state.agent.classify_product(product_info)
-                
-                # Check if fallback needed
-                if enable_fallback and result.get('confidence', '0%') == '0%':
-                    st.warning("Product not found in database. Using AI fallback analysis...")
-                    result = st.session_state.fallback.analyze_unknown_product(product_info)
-                
-                # Add to history
-                result['timestamp'] = datetime.now().isoformat()
-                result['product_info'] = product_info
-                st.session_state.classification_history.append(result)
-                
-                # Store for feedback
-                st.session_state.current_result = result
-                st.session_state.current_product_info = product_info
-                
-                # Display results
-                display_results(result, product_info)
+                try:
+                    # Prepare product info
+                    product_info = {
+                        'product_name': product_name,
+                        'description': description,
+                        'material': material,
+                        'use': use,
+                        'origin': origin
+                    }
+                    
+                    # Classify
+                    result = st.session_state.agent.classify_product(product_info)
+                    
+                    # Check if fallback needed
+                    if enable_fallback and result.get('confidence', '0%') == '0%':
+                        st.warning("Product not found in database. Using AI fallback analysis...")
+                        result = st.session_state.fallback.analyze_unknown_product(product_info)
+                    
+                    # Add to history
+                    result['timestamp'] = datetime.now().isoformat()
+                    result['product_info'] = product_info
+                    st.session_state.classification_history.append(result)
+                    
+                    # Store for feedback
+                    st.session_state.current_result = result
+                    st.session_state.current_product_info = product_info
+                    
+                    # Display results
+                    display_results(result, product_info)
+                    
+                except Exception as e:
+                    st.error(f"❌ Classification error: {str(e)}")
+                    with st.expander("🔧 Error Details"):
+                        import traceback
+                        st.code(traceback.format_exc())
 
 def display_results(result, product_info):
     """Display classification results"""
@@ -964,6 +1004,11 @@ def show_about_page():
     """About page"""
     st.markdown('<div class="main-header">📚 About HS Code Classifier</div>', unsafe_allow_html=True)
     
+    # Show model info
+    if hasattr(st.session_state, 'enhancer'):
+        model_name = getattr(st.session_state.enhancer, 'model_name', 'Unknown')
+        st.info(f"🤖 Currently using AI Model: **{model_name}**")
+    
     st.markdown("""
     ## AI-Powered Customs Classification System
     
@@ -995,7 +1040,7 @@ def show_about_page():
     
     ### Technology Stack
     
-    - **AI Model**: Google Gemini 2.5 Flash
+    - **AI Model**: Google Gemini (with automatic fallback)
     - **Embeddings**: all-mpnet-base-v2 (768 dimensions)
     - **Vector DB**: Pinecone
     - **Framework**: LangChain
@@ -1033,7 +1078,7 @@ def show_about_page():
     
     - **Version**: 1.0.0
     - **Last Updated**: October 2025
-    - **Model**: Gemini 2.5 Flash
+    - **Primary Model**: Gemini 1.5 Flash (or configured model)
     - **Embedding Model**: all-mpnet-base-v2
     
     ---
