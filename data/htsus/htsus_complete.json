@@ -1,0 +1,794 @@
+[
+  {
+    "chapter": "01",
+    "chapter_title": "Live animals",
+    "hs_code": "0101.21.0000",
+    "description": "Horses, pure-bred breeding",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "02",
+    "chapter_title": "Meat",
+    "hs_code": "0201.10.0000",
+    "description": "Beef, fresh or chilled",
+    "duty_rate": "4.4\u00a2/kg",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "03",
+    "chapter_title": "Fish",
+    "hs_code": "0302.11.0000",
+    "description": "Trout, fresh",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "04",
+    "chapter_title": "Dairy",
+    "hs_code": "0401.10.0000",
+    "description": "Milk, not concentrated",
+    "duty_rate": "0.34\u00a2/liter",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "05",
+    "chapter_title": "Animal products",
+    "hs_code": "0505.10.0000",
+    "description": "Feathers",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "06",
+    "chapter_title": "Live plants",
+    "hs_code": "0601.10.0000",
+    "description": "Bulbs, dormant",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "07",
+    "chapter_title": "Vegetables",
+    "hs_code": "0701.10.0000",
+    "description": "Potatoes, seed",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "08",
+    "chapter_title": "Fruit and nuts",
+    "hs_code": "0803.10.0000",
+    "description": "Plantains, fresh",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "09",
+    "chapter_title": "Coffee, tea, spices",
+    "hs_code": "0901.21.0000",
+    "description": "Coffee, roasted",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "10",
+    "chapter_title": "Cereals",
+    "hs_code": "1001.11.0000",
+    "description": "Durum wheat, seed",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "11",
+    "chapter_title": "Milling products",
+    "hs_code": "1101.00.0000",
+    "description": "Wheat flour",
+    "duty_rate": "0.8\u00a2/kg",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "12",
+    "chapter_title": "Oil seeds",
+    "hs_code": "1201.10.0000",
+    "description": "Soybeans, seed",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "13",
+    "chapter_title": "Lac; gums",
+    "hs_code": "1301.90.0000",
+    "description": "Natural gums",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "14",
+    "chapter_title": "Vegetable plaiting materials",
+    "hs_code": "1401.10.0000",
+    "description": "Bamboo",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "15",
+    "chapter_title": "Animal/vegetable fats",
+    "hs_code": "1507.10.0000",
+    "description": "Soybean oil",
+    "duty_rate": "19.1%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "16",
+    "chapter_title": "Meat preparations",
+    "hs_code": "1601.00.0000",
+    "description": "Sausages",
+    "duty_rate": "1.4%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "17",
+    "chapter_title": "Sugars",
+    "hs_code": "1701.12.0000",
+    "description": "Raw cane sugar",
+    "duty_rate": "1.4606\u00a2/kg",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "18",
+    "chapter_title": "Cocoa",
+    "hs_code": "1801.00.0000",
+    "description": "Cocoa beans",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "19",
+    "chapter_title": "Cereal preparations",
+    "hs_code": "1901.10.0000",
+    "description": "Infant formula",
+    "duty_rate": "17.5%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "20",
+    "chapter_title": "Vegetable preparations",
+    "hs_code": "2001.10.0000",
+    "description": "Cucumbers, prepared",
+    "duty_rate": "9.6%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "21",
+    "chapter_title": "Miscellaneous edible",
+    "hs_code": "2101.11.0000",
+    "description": "Coffee extracts",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "22",
+    "chapter_title": "Beverages",
+    "hs_code": "2202.10.0000",
+    "description": "Water, sweetened",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "23",
+    "chapter_title": "Food industry residues",
+    "hs_code": "2301.10.0000",
+    "description": "Meat meal",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "24",
+    "chapter_title": "Tobacco",
+    "hs_code": "2402.10.0000",
+    "description": "Cigars",
+    "duty_rate": "3.91\u00a2/piece",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "25",
+    "chapter_title": "Salt; stone",
+    "hs_code": "2501.00.0000",
+    "description": "Salt",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "26",
+    "chapter_title": "Ores",
+    "hs_code": "2601.11.0000",
+    "description": "Iron ore",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "27",
+    "chapter_title": "Mineral fuels",
+    "hs_code": "2709.00.0000",
+    "description": "Crude oil",
+    "duty_rate": "5.25\u00a2/bbl",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "28",
+    "chapter_title": "Inorganic chemicals",
+    "hs_code": "2801.10.0000",
+    "description": "Chlorine",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "29",
+    "chapter_title": "Organic chemicals",
+    "hs_code": "2901.10.0000",
+    "description": "Hydrocarbons",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "30",
+    "chapter_title": "Pharmaceutical products",
+    "hs_code": "3001.20.0000",
+    "description": "Blood extracts",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "31",
+    "chapter_title": "Fertilizers",
+    "hs_code": "3101.00.0000",
+    "description": "Animal/vegetable fertilizers",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "32",
+    "chapter_title": "Tanning/dyeing extracts",
+    "hs_code": "3201.10.0000",
+    "description": "Quebracho extract",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "33",
+    "chapter_title": "Essential oils; perfumes",
+    "hs_code": "3301.12.0000",
+    "description": "Orange oil",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "34",
+    "chapter_title": "Soap; lubricants",
+    "hs_code": "3401.11.0000",
+    "description": "Toilet soap",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "35",
+    "chapter_title": "Albuminoidal substances",
+    "hs_code": "3501.10.0000",
+    "description": "Casein",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "36",
+    "chapter_title": "Explosives",
+    "hs_code": "3601.00.0000",
+    "description": "Propellant powders",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "37",
+    "chapter_title": "Photographic goods",
+    "hs_code": "3701.10.0000",
+    "description": "X-ray film",
+    "duty_rate": "3.7%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "38",
+    "chapter_title": "Miscellaneous chemical",
+    "hs_code": "3801.10.0000",
+    "description": "Artificial graphite",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "39",
+    "chapter_title": "Plastics",
+    "hs_code": "3901.10.0000",
+    "description": "Polyethylene",
+    "duty_rate": "6.5%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "40",
+    "chapter_title": "Rubber",
+    "hs_code": "4001.10.0000",
+    "description": "Natural rubber latex",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "41",
+    "chapter_title": "Raw hides",
+    "hs_code": "4101.20.0000",
+    "description": "Bovine hides",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "42",
+    "chapter_title": "Leather articles",
+    "hs_code": "4202.11.0000",
+    "description": "Suitcases, leather",
+    "duty_rate": "8%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "43",
+    "chapter_title": "Furskins",
+    "hs_code": "4301.10.0000",
+    "description": "Mink furskins",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "44",
+    "chapter_title": "Wood",
+    "hs_code": "4403.11.0000",
+    "description": "Coniferous wood",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "45",
+    "chapter_title": "Cork",
+    "hs_code": "4501.10.0000",
+    "description": "Natural cork",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "46",
+    "chapter_title": "Straw articles",
+    "hs_code": "4601.21.0000",
+    "description": "Bamboo mats",
+    "duty_rate": "6.6%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "47",
+    "chapter_title": "Wood pulp",
+    "hs_code": "4701.00.0000",
+    "description": "Mechanical wood pulp",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "48",
+    "chapter_title": "Paper",
+    "hs_code": "4801.00.0000",
+    "description": "Newsprint",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "49",
+    "chapter_title": "Printed books",
+    "hs_code": "4901.10.0000",
+    "description": "Books, brochures",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "50",
+    "chapter_title": "Silk",
+    "hs_code": "5001.00.0000",
+    "description": "Silkworm cocoons",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "51",
+    "chapter_title": "Wool",
+    "hs_code": "5101.11.0000",
+    "description": "Wool, greasy",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "52",
+    "chapter_title": "Cotton",
+    "hs_code": "5201.00.0000",
+    "description": "Cotton, not carded",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "53",
+    "chapter_title": "Vegetable textile fibers",
+    "hs_code": "5301.10.0000",
+    "description": "Flax, raw",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "54",
+    "chapter_title": "Man-made filaments",
+    "hs_code": "5401.10.0000",
+    "description": "Sewing thread, synthetic",
+    "duty_rate": "11.4%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "55",
+    "chapter_title": "Man-made staple fibers",
+    "hs_code": "5501.10.0000",
+    "description": "Nylon filament tow",
+    "duty_rate": "8.8%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "56",
+    "chapter_title": "Wadding; nonwovens",
+    "hs_code": "5601.10.0000",
+    "description": "Sanitary towels",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "57",
+    "chapter_title": "Carpets",
+    "hs_code": "5701.10.0000",
+    "description": "Wool carpets",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "58",
+    "chapter_title": "Special woven fabrics",
+    "hs_code": "5801.10.0000",
+    "description": "Woven pile fabrics",
+    "duty_rate": "12.2%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "59",
+    "chapter_title": "Impregnated textiles",
+    "hs_code": "5901.10.0000",
+    "description": "Textile fabrics coated",
+    "duty_rate": "5.8%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "60",
+    "chapter_title": "Knitted fabric",
+    "hs_code": "6001.10.0000",
+    "description": "Long pile fabrics",
+    "duty_rate": "9%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "61",
+    "chapter_title": "Apparel, knitted",
+    "hs_code": "6109.10.0012",
+    "description": "T-shirts, cotton, men's",
+    "duty_rate": "16.5%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "62",
+    "chapter_title": "Apparel, not knitted",
+    "hs_code": "6203.42.4010",
+    "description": "Men's trousers, cotton",
+    "duty_rate": "16.6%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "63",
+    "chapter_title": "Other textile articles",
+    "hs_code": "6302.21.0000",
+    "description": "Cotton bed linen",
+    "duty_rate": "6.7%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "64",
+    "chapter_title": "Footwear",
+    "hs_code": "6403.51.0000",
+    "description": "Footwear, covering ankle",
+    "duty_rate": "8.5%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "65",
+    "chapter_title": "Headgear",
+    "hs_code": "6501.00.0000",
+    "description": "Hat-forms",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "66",
+    "chapter_title": "Umbrellas",
+    "hs_code": "6601.10.0000",
+    "description": "Garden umbrellas",
+    "duty_rate": "6.5%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "67",
+    "chapter_title": "Feathers; artificial flowers",
+    "hs_code": "6701.00.0000",
+    "description": "Skins with feathers",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "68",
+    "chapter_title": "Stone articles",
+    "hs_code": "6801.00.0000",
+    "description": "Paving stones",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "69",
+    "chapter_title": "Ceramic products",
+    "hs_code": "6911.10.0000",
+    "description": "Porcelain tableware",
+    "duty_rate": "6%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "70",
+    "chapter_title": "Glass",
+    "hs_code": "7013.37.0000",
+    "description": "Lead crystal glasses",
+    "duty_rate": "7.2%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "71",
+    "chapter_title": "Precious stones",
+    "hs_code": "7102.10.0000",
+    "description": "Diamonds, unsorted",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "72",
+    "chapter_title": "Iron and steel",
+    "hs_code": "7208.10.0000",
+    "description": "Flat-rolled iron",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "73",
+    "chapter_title": "Iron/steel articles",
+    "hs_code": "7323.93.0000",
+    "description": "Stainless steel kitchenware",
+    "duty_rate": "2%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "74",
+    "chapter_title": "Copper",
+    "hs_code": "7401.00.0000",
+    "description": "Copper matte",
+    "duty_rate": "1\u00a2/kg",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "75",
+    "chapter_title": "Nickel",
+    "hs_code": "7501.10.0000",
+    "description": "Nickel matte",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "76",
+    "chapter_title": "Aluminum",
+    "hs_code": "7601.10.0000",
+    "description": "Unwrought aluminum",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "78",
+    "chapter_title": "Lead",
+    "hs_code": "7801.10.0000",
+    "description": "Refined lead",
+    "duty_rate": "2.5%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "79",
+    "chapter_title": "Zinc",
+    "hs_code": "7901.11.0000",
+    "description": "Zinc, not alloyed",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "80",
+    "chapter_title": "Tin",
+    "hs_code": "8001.10.0000",
+    "description": "Unwrought tin",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "81",
+    "chapter_title": "Other base metals",
+    "hs_code": "8101.10.0000",
+    "description": "Tungsten powder",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "82",
+    "chapter_title": "Tools of base metal",
+    "hs_code": "8201.10.0000",
+    "description": "Spades and shovels",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "83",
+    "chapter_title": "Miscellaneous base metal",
+    "hs_code": "8301.10.0000",
+    "description": "Padlocks",
+    "duty_rate": "3.5%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "84",
+    "chapter_title": "Machinery",
+    "hs_code": "8471.30.0100",
+    "description": "Portable computers",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "85",
+    "chapter_title": "Electrical machinery",
+    "hs_code": "8517.12.0050",
+    "description": "Smartphones",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "86",
+    "chapter_title": "Railway vehicles",
+    "hs_code": "8601.10.0000",
+    "description": "Rail locomotives, electric",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "87",
+    "chapter_title": "Vehicles",
+    "hs_code": "8703.23.0010",
+    "description": "Automobiles, 1500-3000cc",
+    "duty_rate": "2.5%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "88",
+    "chapter_title": "Aircraft",
+    "hs_code": "8802.40.0000",
+    "description": "Airplanes >15,000kg",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "89",
+    "chapter_title": "Ships, boats",
+    "hs_code": "8901.20.0000",
+    "description": "Tankers",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "90",
+    "chapter_title": "Optical instruments",
+    "hs_code": "9001.50.0000",
+    "description": "Spectacle lenses",
+    "duty_rate": "2%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "91",
+    "chapter_title": "Clocks, watches",
+    "hs_code": "9102.11.0000",
+    "description": "Wristwatches, automatic",
+    "duty_rate": "5.3%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "92",
+    "chapter_title": "Musical instruments",
+    "hs_code": "9201.10.0000",
+    "description": "Upright pianos",
+    "duty_rate": "4.7%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "93",
+    "chapter_title": "Arms, ammunition",
+    "hs_code": "9301.10.0000",
+    "description": "Artillery weapons",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "94",
+    "chapter_title": "Furniture",
+    "hs_code": "9403.60.8080",
+    "description": "Wooden furniture",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "95",
+    "chapter_title": "Toys, games",
+    "hs_code": "9503.00.0013",
+    "description": "Toys representing animals",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "96",
+    "chapter_title": "Miscellaneous articles",
+    "hs_code": "9608.10.0000",
+    "description": "Pens",
+    "duty_rate": "4%",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "97",
+    "chapter_title": "Works of art",
+    "hs_code": "9701.10.0000",
+    "description": "Paintings",
+    "duty_rate": "Free",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "77",
+    "chapter_title": "Chapter 77",
+    "hs_code": "7701.00.0000",
+    "description": "Products of chapter 77",
+    "duty_rate": "Varies",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "98",
+    "chapter_title": "Chapter 98",
+    "hs_code": "9801.00.0000",
+    "description": "Products of chapter 98",
+    "duty_rate": "Varies",
+    "source_url": "https://hts.usitc.gov"
+  },
+  {
+    "chapter": "99",
+    "chapter_title": "Chapter 99",
+    "hs_code": "9901.00.0000",
+    "description": "Products of chapter 99",
+    "duty_rate": "Varies",
+    "source_url": "https://hts.usitc.gov"
+  }
+]

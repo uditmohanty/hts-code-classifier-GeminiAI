@@ -1,0 +1,20 @@
+[
+  {
+    "ruling_id": "NY_N123456",
+    "ruling_number": "NY N123456",
+    "date": "2019-03-15",
+    "hs_code": "6109.10.0012",
+    "description": "Classification of cotton knit shirts",
+    "decision": "The subject merchandise is classified under subheading 6109.10.0012",
+    "url": "https://rulings.cbp.gov/ruling/NY_N123456"
+  },
+  {
+    "ruling_id": "NY_N789012",
+    "ruling_number": "NY N789012",
+    "date": "2020-06-22",
+    "hs_code": "8517.12.0050",
+    "description": "Classification of smartphones with GPS",
+    "decision": "The smartphones are classified under 8517.12.0050",
+    "url": "https://rulings.cbp.gov/ruling/NY_N789012"
+  }
+]
