@@ -5,7 +5,7 @@ import os
 import tempfile
 from datetime import datetime
 
-# --- your project modules ---
+# --- project modules ---
 from src.agents.hs_code_agent import HSCodeAgent
 from src.agents.fallback_analyzer import FallbackAnalyzer
 from src.utils.report_generator import ReportGenerator
@@ -380,7 +380,7 @@ def show_classifier_page():
                         'origin': origin
                     }
 
-                    # --- Primary DB/agent classification ---
+                    # Primary DB/agent
                     result = st.session_state.agent.classify_product(product_info) or {}
 
                     def _float_conf(x):
@@ -397,7 +397,7 @@ def show_classifier_page():
                     rec_code = str(result.get('recommended_code', '')).strip().upper()
                     conf_val = _float_conf(result.get('confidence', -1))
 
-                    # Fallback triggers: no code / N/A / ERROR / very low confidence
+                    # Fallback triggers
                     missing_or_low = (rec_code in ("", "N/A", "ERROR")) or (conf_val < 50.0)
 
                     if st.session_state.enable_fallback and missing_or_low:
@@ -508,14 +508,23 @@ def display_results(result, product_info):
             key="json_download"
         )
     with col2:
-        pdf_bytes = report_generator.generate_pdf_report(result, product_info)
-        st.download_button(
-            label="📄 Download PDF Report",
-            data=pdf_bytes,
-            file_name=f"hs_code_{product_info['product_name'].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf",
-            mime="application/pdf",
-            key="pdf_download"
-        )
+        report_generator = ReportGenerator()
+        try:
+            pdf_bytes = report_generator.generate_pdf_report(result, product_info)
+            st.download_button(
+                label="📄 Download PDF Report",
+                data=pdf_bytes,
+                file_name=f"hs_code_{product_info['product_name'].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                mime="application/pdf",
+                key="pdf_download"
+            )
+        except Exception as e:
+            st.error(f"📄 PDF export failed: {e}")
+            with st.expander("How to fix PDF export"):
+                st.write(
+                    "Add Unicode TTF fonts (DejaVuSans.ttf and DejaVuSans-Bold.ttf) under "
+                    "`src/utils/assets/fonts/`, then rerun the app."
+                )
 
     st.markdown("---")
     display_feedback_section(result, product_info)
