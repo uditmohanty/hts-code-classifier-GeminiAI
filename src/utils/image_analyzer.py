@@ -1,111 +1,76 @@
-import google.generativeai as genai
-import sys
+# src/utils/image_analyzer.py
 import os
+import io
 import json
-from PIL import Image
+import re
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-
-from config.settings import Config
+try:
+    import google.generativeai as genai
+except Exception as e:
+    genai = None
 
 class ImageAnalyzer:
-    """Analyze product images for customs classification"""
-    
-    def __init__(self):
-        genai.configure(api_key=Config.GOOGLE_API_KEY)
-        # Use vision-capable model
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
-    
+    """
+    Torch-free image analyzer that uses Gemini Vision to extract structured details
+    from a product photo. Returns a dict with 'success' and the fields used by the app.
+    """
+
+    def __init__(self, model_name: str | None = None):
+        api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise RuntimeError("Missing GOOGLE_API_KEY (or GEMINI_API_KEY) in environment.")
+
+        if genai is None:
+            raise RuntimeError("google-generativeai is not installed.")
+
+        genai.configure(api_key=api_key)
+        self.model_name = model_name or os.environ.get("GEMINI_IMAGE_MODEL", "gemini-1.5-flash")
+        self.model = genai.GenerativeModel(self.model_name)
+
+    def _extract_json(self, text: str) -> dict:
+        """
+        Pull the first JSON object from a model response safely.
+        """
+        m = re.search(r"\{[\s\S]*\}", text)
+        if not m:
+            raise ValueError("No JSON object found in model response.")
+        return json.loads(m.group(0))
+
     def analyze_product_image(self, image_path: str) -> dict:
-        """
-        Analyze product image and extract classification details
-        
-        Args:
-            image_path: Path to product image file
-            
-        Returns:
-            dict with product details extracted from image
-        """
-        
-        prompt = """Analyze this product image for customs classification purposes. 
-
-Identify and describe:
-1. Product type and name
-2. Materials visible (fabric type, metal, plastic, wood, etc.)
-3. Construction method (woven, knit, molded, assembled, etc.)
-4. Key features (buttons, zippers, labels, patterns, etc.)
-5. Intended use based on design
-6. Approximate size/dimensions if discernible
-7. Any visible brand names or country of origin labels
-
-Format response as JSON:
-{
-    "product_name": "What the product appears to be",
-    "description": "Detailed visual description",
-    "material": "Materials identified from image",
-    "construction": "How it's made/constructed",
-    "features": ["list", "of", "key features"],
-    "intended_use": "What it's used for",
-    "additional_notes": "Any other relevant details"
-}
-
-Be specific and technical. Use terminology relevant to customs classification.
-Return ONLY the JSON."""
-
         try:
-            # Load and process image
-            img = Image.open(image_path)
-            
-            # Generate analysis
-            response = self.model.generate_content([prompt, img])
-            result_text = response.text.strip()
-            
-            # Clean response
-            if result_text.startswith('```json'):
-                result_text = result_text.replace('```json', '').replace('```', '').strip()
-            elif result_text.startswith('```'):
-                result_text = result_text.replace('```', '').strip()
-            
-            result = json.loads(result_text)
-            
+            with open(image_path, "rb") as f:
+                img_bytes = f.read()
+
+            prompt = (
+                "You are an import classification assistant. From this product image, "
+                "extract a concise, structured JSON with keys: "
+                "product_name, material, construction, description, intended_use, "
+                "features (array of short strings), additional_notes. "
+                "Keep it factual; do not guess brand names."
+            )
+
+            response = self.model.generate_content(
+                [
+                    prompt,
+                    {"mime_type": "image/jpeg", "data": img_bytes},
+                ]
+            )
+
+            # Some Gemini responses include prose around JSON; extract robustly.
+            text = getattr(response, "text", "") or "".join(p.text for p in response.candidates[0].content.parts)
+            data = self._extract_json(text)
+
             return {
-                'product_name': result.get('product_name', ''),
-                'description': result.get('description', ''),
-                'material': result.get('material', ''),
-                'construction': result.get('construction', ''),
-                'features': result.get('features', []),
-                'intended_use': result.get('intended_use', ''),
-                'additional_notes': result.get('additional_notes', ''),
-                'success': True
-            }
-            
-        except Exception as e:
-            print(f"Error analyzing image: {e}")
-            return {
-                'product_name': '',
-                'description': '',
-                'material': '',
-                'construction': '',
-                'features': [],
-                'intended_use': '',
-                'additional_notes': '',
-                'success': False,
-                'error': str(e)
+                "success": True,
+                "product_name": data.get("product_name", ""),
+                "material": data.get("material", ""),
+                "construction": data.get("construction", ""),
+                "description": data.get("description", ""),
+                "intended_use": data.get("intended_use", ""),
+                "features": data.get("features", []),
+                "additional_notes": data.get("additional_notes", ""),
+                "model_used": self.model_name,
             }
 
-if __name__ == "__main__":
-    analyzer = ImageAnalyzer()
-    
-    # Test with an image
-    test_image = "test_product.jpg"
-    if os.path.exists(test_image):
-        result = analyzer.analyze_product_image(test_image)
-        if result['success']:
-            print("Image Analysis Result:")
-            print(f"Product: {result['product_name']}")
-            print(f"Material: {result['material']}")
-            print(f"Description: {result['description']}")
-        else:
-            print(f"Error: {result['error']}")
-    else:
-        print(f"Test image not found: {test_image}")
+        except Exception as e:
+            return {"success": False, "error": str(e)}
