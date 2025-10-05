@@ -41,7 +41,7 @@ class FallbackAnalyzer:
             raise RuntimeError("Please install google-generativeai.")
 
         genai.configure(api_key=api_key)
-        self.model_name = model_name or os.environ.get("GEMINI_TEXT_MODEL", "gemini-1.5-pro")
+        self.model_name = model_name or os.environ.get("GEMINI_TEXT_MODEL", "gemini-2.5-flash")
         self.model = genai.GenerativeModel(self.model_name)
 
     def analyze_unknown_product(self, product_info: dict) -> dict:

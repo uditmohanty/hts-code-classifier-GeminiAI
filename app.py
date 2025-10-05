@@ -300,7 +300,7 @@ def show_classifier_page():
     )
 
     if uploaded_file is not None:
-        st.image(uploaded_file, caption="Uploaded Product Image", use_container_width=True)
+      st.image(uploaded_file, caption="Uploaded Product Image", use_column_width=True)
 
     if uploaded_file is not None:
         try:

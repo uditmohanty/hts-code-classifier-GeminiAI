@@ -9,7 +9,7 @@ import numpy as np
 import re
 
 class EnhancedBatchProcessor:
-    """Ultra-flexible batch processing that handles any file format"""
+    """Ultra-flexible batch processing that handles any file format and ALL rows"""
     
     def __init__(self, hs_agent, fallback_analyzer=None, duty_calculator=None):
         self.hs_agent = hs_agent
@@ -24,6 +24,11 @@ class EnhancedBatchProcessor:
         # Normalize column names
         df = df.copy()
         original_columns = df.columns.tolist()
+        
+        # FIX: Handle potential MultiIndex columns
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = ['_'.join(map(str, col)).strip() for col in df.columns]
+        
         df.columns = df.columns.str.strip().str.lower().str.replace(r'[^\w\s]', '', regex=True)
         
         mapping_info = {
@@ -38,13 +43,13 @@ class EnhancedBatchProcessor:
                 r'.*product.*name.*', r'.*item.*name.*', r'.*sku.*name.*',
                 r'^name$', r'^product$', r'^item$', r'^sku$', r'^title$',
                 r'.*description.*1.*', r'^article$', r'^merchandise$',
-                r'^goods$', r'^commodity$', r'^part.*number$'
+                r'^goods$', r'^commodity$', r'^part.*number$', r'^slno$', r'^sl.*no$', r'^srno$'
             ],
             'description': [
                 r'^description$', r'^desc$', r'.*detail.*', r'.*specification.*',
                 r'.*description.*2.*', r'.*long.*desc.*', r'.*full.*desc.*',
                 r'^spec$', r'^info$', r'.*information$', r'^about$',
-                r'^summary$', r'^overview$', r'^features$'
+                r'^summary$', r'^overview$', r'^features$', r'.*product.*description.*'
             ],
             'material': [
                 r'.*material.*', r'.*composition.*', r'.*fabric.*', r'.*made.*',
@@ -84,47 +89,68 @@ class EnhancedBatchProcessor:
                     
                 for pattern in patterns:
                     if re.match(pattern, col):
-                        standardized_df[standard_name] = df[col]
-                        mapping_info['detected_mappings'][standard_name] = original_columns[df.columns.tolist().index(col)]
-                        columns_mapped.add(col)
+                        # FIX: Ensure we're always assigning a Series, not a DataFrame
+                        try:
+                            col_data = df[col]
+                            if isinstance(col_data, pd.DataFrame):
+                                # If somehow it's a DataFrame, take the first column
+                                standardized_df[standard_name] = col_data.iloc[:, 0]
+                            else:
+                                standardized_df[standard_name] = col_data
+                            
+                            mapping_info['detected_mappings'][standard_name] = original_columns[list(df.columns).index(col)]
+                            columns_mapped.add(col)
+                        except Exception as e:
+                            # Skip problematic columns
+                            continue
                         break
                 
                 if standard_name in standardized_df.columns:
                     break
         
         # Copy over any unmapped columns (preserve extra data)
+        # FIX: More robust column copying
         for col in df.columns:
             if col not in columns_mapped:
-                standardized_df[col] = df[col]
+                try:
+                    col_data = df[col]
+                    if isinstance(col_data, pd.DataFrame):
+                        # If it's a DataFrame, take first column
+                        standardized_df[col] = col_data.iloc[:, 0]
+                    else:
+                        standardized_df[col] = col_data
+                except Exception:
+                    # Skip columns that cause issues
+                    continue
         
         # Intelligent fallback creation for missing critical columns
         if 'product_name' not in standardized_df.columns:
             # Try to create from any available text columns
-            text_columns = df.select_dtypes(include=['object', 'string']).columns
+            text_columns = standardized_df.select_dtypes(include=['object', 'string']).columns
             if len(text_columns) > 0:
                 # Use the first text column as product name
-                standardized_df['product_name'] = df[text_columns[0]]
+                standardized_df['product_name'] = standardized_df[text_columns[0]].astype(str)
                 mapping_info['created_columns'].append(('product_name', f'Created from {text_columns[0]}'))
             else:
                 # Create generic product names
-                standardized_df['product_name'] = [f'Product_{i+1}' for i in range(len(df))]
+                standardized_df['product_name'] = [f'Product_{i+1}' for i in range(len(standardized_df))]
                 mapping_info['created_columns'].append(('product_name', 'Auto-generated'))
         
         if 'description' not in standardized_df.columns:
             # Try to combine available text fields
-            text_columns = df.select_dtypes(include=['object', 'string']).columns
+            text_columns = standardized_df.select_dtypes(include=['object', 'string']).columns
             if len(text_columns) > 1:
                 # Combine multiple text columns
-                standardized_df['description'] = df[text_columns].fillna('').apply(
+                standardized_df['description'] = standardized_df[text_columns].fillna('').apply(
                     lambda x: ' '.join(str(val) for val in x if val), axis=1
                 )
                 mapping_info['created_columns'].append(('description', 'Combined from text columns'))
             elif len(text_columns) == 1:
-                standardized_df['description'] = df[text_columns[0]]
+                standardized_df['description'] = standardized_df[text_columns[0]].astype(str)
                 mapping_info['created_columns'].append(('description', f'Copied from {text_columns[0]}'))
             else:
                 # Use product name as description
-                standardized_df['description'] = standardized_df['product_name']
+                standardized_df['description'] = standardized_df['product_name'].astype(str)
                 mapping_info['created_columns'].append(('description', 'Copied from product_name'))
         
         # Add empty columns for optional fields if not present
@@ -141,32 +167,37 @@ class EnhancedBatchProcessor:
         
         return standardized_df, mapping_info
     
-    def validate_input_file(self, df: pd.DataFrame, with_duties: bool = False) -> tuple[bool, str, Dict]:
+    def validate_input_file(self, df: pd.DataFrame, with_duties: bool = False) -> tuple[bool, str]:
         """
-        Ultra-flexible validation that accepts almost any file
-        Returns: (is_valid, message, mapping_info)
+        Ultra-flexible validation that accepts files of ANY size
+        Returns: (is_valid, message)
         """
         # Check if dataframe is empty
         if len(df) == 0:
-            return False, "The file contains no data rows", {}
+            return False, "The file contains no data rows"
         
-        # Check if too many rows
-        if len(df) > 100:
-            return False, f"File contains {len(df)} rows. Maximum 100 products per batch. Please split your file.", {}
+        # NO LIMIT ON NUMBER OF ROWS - Process everything!
         
         # Detect and map columns
-        standardized_df, mapping_info = self.detect_and_map_columns(df)
+        try:
+            standardized_df, mapping_info = self.detect_and_map_columns(df)
+        except Exception as e:
+            return False, f"Error processing file columns: {str(e)}"
         
         # Update the original dataframe with standardized columns
         for col in standardized_df.columns:
             df[col] = standardized_df[col]
         
         # Create validation message
-        message_parts = [f"✅ File processed successfully ({len(df)} products)"]
+        total_products = len(df)
+        message_parts = [f"✅ Ready to process ALL {total_products} products"]
         
         if mapping_info['detected_mappings']:
             detected = [f"{k} ← {v}" for k, v in mapping_info['detected_mappings'].items()]
-            message_parts.append(f"Detected: {', '.join(detected[:3])}")
+            if len(detected) > 3:
+                message_parts.append(f"Detected: {', '.join(detected[:3])}...")
+            else:
+                message_parts.append(f"Detected: {', '.join(detected)}")
         
         if mapping_info['created_columns']:
             created = [f"{col[0]}" for col in mapping_info['created_columns']]
@@ -184,7 +215,16 @@ class EnhancedBatchProcessor:
             if not has_value_data:
                 message_parts.append("⚠️ No value data found - duty calculation disabled")
         
-        return True, " | ".join(message_parts), mapping_info
+        # Add processing time estimate
+        if total_products > 50:
+            estimated_time = total_products * 0.5  # 0.5 seconds per product
+            message_parts.append(f"⏱️ Estimated time: {estimated_time/60:.1f} minutes")
+        
+        # Store mapping info in session state for later use if needed
+        if 'batch_mapping_info' not in st.session_state:
+            st.session_state.batch_mapping_info = mapping_info
+        
+        return True, " | ".join(message_parts)
     
     def process_batch_with_duties(self, df: pd.DataFrame, 
                                   calculate_duties: bool = False,
@@ -193,13 +233,15 @@ class EnhancedBatchProcessor:
                                   include_hmf: bool = True,
                                   progress_callback=None) -> pd.DataFrame:
         """
-        Process multiple products with maximum flexibility
+        Process ALL products in the dataframe - no limits!
         """
         # Ensure columns are standardized
         standardized_df, _ = self.detect_and_map_columns(df)
         
         results = []
         total = len(standardized_df)
+        
+        st.info(f"🚀 Processing ALL {total} products... This will classify everything in your file!")
         
         for idx, row in standardized_df.iterrows():
             # Update progress
@@ -263,8 +305,13 @@ class EnhancedBatchProcessor:
             row_result['processed_at'] = datetime.now().isoformat()
             results.append(row_result)
             
-            # Small delay to avoid overwhelming the API
-            time.sleep(0.5)
+            # Adaptive delay - shorter for larger batches
+            if total < 20:
+                time.sleep(0.5)
+            elif total < 50:
+                time.sleep(0.3)
+            else:
+                time.sleep(0.2)  # Faster for large batches
         
         return pd.DataFrame(results)
     
@@ -441,7 +488,7 @@ class EnhancedBatchProcessor:
                 'message': 'No duty data available'
             }
         
-        duty_df = df[(df.get('classification_status', 'Success') == 'Success') & (df['customs_value'] > 0)]
+        duty_df = df[(df.get('classification_status', 'Success') == 'Success') & (df.get('customs_value', 0) > 0)]
         
         if duty_df.empty:
             return {
