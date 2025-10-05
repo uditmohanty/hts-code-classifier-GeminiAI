@@ -9,7 +9,6 @@ except Exception as e:
 
 
 def _extract_first_json(text: str) -> dict:
-    """Extract the first top-level JSON object from a string."""
     m = re.search(r"\{[\s\S]*\}", text)
     if not m:
         raise ValueError("No JSON object found in model response.")
@@ -17,7 +16,6 @@ def _extract_first_json(text: str) -> dict:
 
 
 def _to_pct(value) -> str:
-    """Normalize confidence to 'NN%'."""
     try:
         s = str(value).strip()
         if s.endswith("%"):
@@ -33,10 +31,7 @@ def _to_pct(value) -> str:
 
 
 class FallbackAnalyzer:
-    """
-    LLM-based fallback using Gemini. No PyTorch required.
-    Returns a dict compatible with the UI.
-    """
+    """Gemini-based fallback. Torch-free."""
 
     def __init__(self, model_name: str | None = None):
         api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
