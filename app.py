@@ -1,3 +1,4 @@
+# app.py
 import streamlit as st
 import json
 import os
@@ -12,7 +13,7 @@ from src.utils.duty_calculator import DutyCalculator
 from src.utils.product_enhancer import ProductEnhancer
 from src.utils.image_analyzer import ImageAnalyzer
 import plotly.graph_objects as go
-import plotly.express as px
+import plotly.express as px  # noqa: F401 (kept for Analytics plots)
 
 # =========================
 # Page config
@@ -49,23 +50,27 @@ def _ensure_widget_defaults():
         if k not in st.session_state:
             st.session_state[k] = ""
 
-def _apply_to_form_and_widgets(description: str = "", material: str = "", intended_use: str = ""):
-    """Write data into both form_* (model state) AND widget keys (Streamlit)."""
+def _apply_to_form_and_widgets(description: str = "", material: str = "", intended_use: str = "", product_name: str = ""):
+    """
+    Apply values to both the app's model state and Streamlit widget keys.
+    IMPORTANT: Call this ONLY before widgets render in the current run.
+    """
     st.session_state.form_description = description or ""
     st.session_state.form_material = material or ""
     st.session_state.form_use = intended_use or ""
-
-    # update widget values (safe only if done BEFORE widgets render in this run)
+    if product_name is not None:
+        st.session_state.product_name_input = product_name or st.session_state.get("product_name_input", "")
     st.session_state.description_input = st.session_state.form_description
     st.session_state.material_input = st.session_state.form_material
     st.session_state.use_input = st.session_state.form_use
 
-def _schedule_fill(description: str, material: str, intended_use: str):
-    """Schedule a fill to be applied at the top of next run."""
+def _schedule_fill(description: str, material: str, intended_use: str, product_name: str = ""):
+    """Schedule a fill to be applied at the top of the next run (safe for Streamlit)."""
     st.session_state.pending_fill = {
         "description": description or "",
         "material": material or "",
-        "use": intended_use or ""
+        "use": intended_use or "",
+        "product_name": product_name or "",
     }
 
 def clear_form():
@@ -76,12 +81,12 @@ def clear_form():
     st.session_state.auto_filled_data = None
     st.session_state.image_analysis = None
     st.session_state.classification_complete = False
-
     st.session_state.product_name_input = ""
     st.session_state.origin_input = ""
     st.session_state.material_input = ""
     st.session_state.description_input = ""
     st.session_state.use_input = ""
+    st.session_state.last_image_sig = None
 
 # =========================
 # Session state init
@@ -90,7 +95,7 @@ if 'classification_history' not in st.session_state:
     st.session_state.classification_history = []
 
 if 'agent' not in st.session_state:
-    with st.spinner("Initializing AI Agent..."):
+    with st.spinner("Initializing AI components..."):
         try:
             st.session_state.agent = HSCodeAgent()
             st.session_state.fallback = FallbackAnalyzer()
@@ -103,13 +108,14 @@ if 'agent' not in st.session_state:
             st.error(f"Failed to initialize components: {str(e)}")
             st.session_state.init_success = False
 
-# Model-side form values
+# Model-side form values (we keep these for compatibility with utils)
 st.session_state.setdefault('form_material', "")
 st.session_state.setdefault('form_description', "")
 st.session_state.setdefault('form_use', "")
 st.session_state.setdefault('classification_complete', False)
 st.session_state.setdefault('auto_filled_data', None)
 st.session_state.setdefault('image_analysis', None)
+st.session_state.setdefault('last_image_sig', None)
 
 # Widget defaults must exist before widgets render
 _ensure_widget_defaults()
@@ -167,7 +173,12 @@ def show_classifier_page():
     # ---- Apply any scheduled fills BEFORE rendering widgets (critical fix) ----
     if 'pending_fill' in st.session_state:
         pf = st.session_state.pending_fill
-        _apply_to_form_and_widgets(pf.get("description",""), pf.get("material",""), pf.get("use",""))
+        _apply_to_form_and_widgets(
+            pf.get("description", ""),
+            pf.get("material", ""),
+            pf.get("use", ""),
+            pf.get("product_name", "")
+        )
         del st.session_state.pending_fill  # consume it
 
     st.markdown('<div class="main-header">📦 HS Code Classification System</div>', unsafe_allow_html=True)
@@ -184,11 +195,11 @@ def show_classifier_page():
 
     st.subheader("Product Information")
 
+    # -------- Product name + Auto-Fill from text --------
     col1, col2 = st.columns([3, 1])
     with col1:
-        product_name = st.text_input(
+        st.text_input(
             "Product Name *",
-            value=st.session_state.get('product_name_input', ''),
             placeholder="e.g., LED desk lamp, Men's Cotton T-Shirt",
             help="Enter the product name - AI can auto-fill the rest",
             key="product_name_input"
@@ -200,20 +211,20 @@ def show_classifier_page():
             type="secondary",
             use_container_width=True,
             key="auto_fill_btn",
-            disabled=not product_name
+            disabled=not st.session_state.product_name_input.strip()
         )
 
-    if auto_fill_clicked and product_name:
+    # Auto-Fill from typed product name
+    if auto_fill_clicked:
         with st.spinner("🤖 AI is analyzing and generating detailed product information..."):
             try:
-                enhanced_data = st.session_state.enhancer.enhance_product_info(product_name)
+                enhanced_data = st.session_state.enhancer.enhance_product_info(st.session_state.product_name_input)
                 if enhanced_data and enhanced_data.get('success', False):
                     desc = enhanced_data.get('description', '')
                     mat = enhanced_data.get('material', '')
                     use = enhanced_data.get('intended_use', '')
-
-                    # schedule -> rerun -> apply at top next run
-                    _schedule_fill(desc, mat, use)
+                    # Keep user's product name; just fill details
+                    _schedule_fill(desc, mat, use, product_name=st.session_state.product_name_input)
                     st.session_state.auto_filled_data = enhanced_data
                     st.success(f"✨ Details auto-generated using {enhanced_data.get('model_used','AI')}!")
                     st.rerun()
@@ -229,141 +240,172 @@ def show_classifier_page():
                     import traceback
                     st.code(traceback.format_exc())
 
+    # Blue banner if AI used
     if st.session_state.auto_filled_data and not st.session_state.classification_complete:
         model_info = st.session_state.auto_filled_data.get('model_used', '')
         if model_info:
             st.info(f"✨ Using AI Model: {model_info}")
 
-    # ---- Form fields
+    # -------- Form fields (key-only; no value/on_change) --------
     col1, col2 = st.columns(2)
     with col1:
-        material = st.text_input(
+        st.text_input(
             "Material/Composition",
-            value=st.session_state.form_material,
             placeholder="e.g., 100% Cotton, Stainless Steel",
             help="What is the product made of?",
             key="material_input",
-            on_change=lambda: setattr(st.session_state, 'form_material', st.session_state.material_input)
         )
-        origin = st.text_input(
+        st.text_input(
             "Country of Origin",
             placeholder="e.g., China, Bangladesh, Vietnam",
             help="Where is the product manufactured?",
             key="origin_input"
         )
     with col2:
-        description = st.text_area(
+        st.text_area(
             "Detailed Description *",
-            value=st.session_state.form_description,
             placeholder="Enter product features, size, style, function...",
             height=100,
             help="Provide as much detail as possible. Use Auto-Fill for AI assistance!",
             key="description_input",
-            on_change=lambda: setattr(st.session_state, 'form_description', st.session_state.description_input)
         )
-        use = st.text_input(
+        st.text_input(
             "Intended Use",
-            value=st.session_state.form_use,
             placeholder="e.g., Office lighting, Casual wear",
             help="What is this product used for?",
             key="use_input",
-            on_change=lambda: setattr(st.session_state, 'form_use', st.session_state.use_input)
         )
 
-    if st.session_state.auto_filled_data and not st.session_state.classification_complete:
+    # Clear Auto-Fill
+    if st.session_state.get('auto_filled_data') and not st.session_state.classification_complete:
         if st.button("🔄 Clear Auto-Fill", key="clear_autofill"):
-            _schedule_fill("", "", "")
             st.session_state.auto_filled_data = None
+            _schedule_fill("", "", "", product_name=st.session_state.product_name_input)
             st.rerun()
 
-    # ---- Image analysis
+    # -------- Image Upload -> Auto-Analyze -> Auto-Fill --------
     st.markdown("---")
     st.subheader("🖼️ Product Image Analysis (Optional)")
+
     uploaded_file = st.file_uploader(
-        "Upload Product Image", type=["jpg", "jpeg", "png"],
-        help="Upload a product image for AI-powered analysis"
+        "Upload Product Image",
+        type=["jpg", "jpeg", "png"],
+        help="Upload a product image. The app will auto-fill product name & details."
     )
 
+    # Show the image if present
     if uploaded_file is not None:
-        col1, col2 = st.columns([2, 1])
-        with col1:
-            st.image(uploaded_file, caption="Uploaded Product Image", use_container_width=True)
-        with col2:
-            st.write(""); st.write("")
-            analyze_image = st.button("🔍 Analyze Image", type="secondary", use_container_width=True)
+        st.image(uploaded_file, caption="Uploaded Product Image", use_container_width=True)
 
-        if analyze_image:
-            with st.spinner("🖼️ AI is analyzing the product image..."):
+    # If a new image is uploaded, auto-run analysis and schedule the fill
+    if uploaded_file is not None:
+        try:
+            file_bytes = uploaded_file.getvalue()
+            image_sig = f"{uploaded_file.name}:{len(file_bytes)}"
+        except Exception:
+            image_sig = uploaded_file.name  # fallback
+
+        if st.session_state.get("last_image_sig") != image_sig:
+            with st.spinner("🖼️ Auto-analyzing the product image..."):
                 try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp_file:
-                        tmp_file.write(uploaded_file.getvalue())
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
+                        tmp_file.write(file_bytes)
                         tmp_path = tmp_file.name
+
                     image_result = st.session_state.image_analyzer.analyze_product_image(tmp_path)
                     os.unlink(tmp_path)
 
-                    if image_result.get('success'):
-                        st.success("✅ Image analyzed successfully!")
+                    if image_result.get("success"):
                         st.session_state.image_analysis = image_result
-                        with st.expander("📋 Image Analysis Results", expanded=True):
-                            st.write(f"**Product Identified:** {image_result.get('product_name','')}")
-                            st.write(f"**Material:** {image_result.get('material','')}")
-                            st.write(f"**Construction:** {image_result.get('construction','')}")
-                            st.write(f"**Description:** {image_result.get('description','')}")
-                            if image_result.get('features'):
-                                st.write(f"**Features:** {', '.join(image_result['features'])}")
-                            st.write(f"**Intended Use:** {image_result.get('intended_use','')}")
-                            if image_result.get('additional_notes'):
-                                st.write(f"**Notes:** {image_result['additional_notes']}")
+                        st.session_state.last_image_sig = image_sig
+
+                        product_name_ai = image_result.get("product_name", "")
+                        desc_ai        = image_result.get("description", "")
+                        material_ai    = image_result.get("material", "")
+                        use_ai         = image_result.get("intended_use", "")
+
+                        _schedule_fill(
+                            description=desc_ai,
+                            material=material_ai,
+                            intended_use=use_ai,
+                            product_name=product_name_ai or st.session_state.product_name_input
+                        )
+
+                        st.session_state.auto_filled_data = {
+                            "enhanced_name": product_name_ai,
+                            "description": desc_ai,
+                            "material": material_ai,
+                            "intended_use": use_ai,
+                            "model_used": "Image Analyzer (Gemini)",
+                            "success": True,
+                        }
+
+                        st.info("✨ Auto-filled Product Name and details from the image.")
+                        st.rerun()
+
                     else:
-                        st.error(f"❌ Failed to analyze image: {image_result.get('error')}")
+                        st.error(f"❌ Failed to analyze image: {image_result.get('error', 'Unknown error')}")
                 except Exception as e:
                     st.error(f"❌ Image analysis error: {str(e)}")
 
-        if st.session_state.image_analysis and st.session_state.image_analysis.get('success'):
-            if st.button("📝 Use Image Data to Fill Form", type="primary", key="use_image_data"):
-                ir = st.session_state.image_analysis
-                _schedule_fill(
-                    ir.get('description', ''),
-                    ir.get('material', ''),
-                    ir.get('intended_use', '')
-                )
-                st.session_state.auto_filled_data = {
-                    'enhanced_name': ir.get('product_name', ''),
-                    'description': ir.get('description', ''),
-                    'material': ir.get('material', ''),
-                    'intended_use': ir.get('intended_use', ''),
-                    'success': True
-                }
-                st.success("✅ Form fill scheduled from image analysis data!")
-                st.rerun()
+    # Optional: show image analysis results
+    if st.session_state.get("image_analysis", {}).get("success"):
+        ir = st.session_state.image_analysis
+        with st.expander("📋 Image Analysis Results", expanded=False):
+            st.write(f"**Product Identified:** {ir.get('product_name', '')}")
+            st.write(f"**Material:** {ir.get('material', '')}")
+            st.write(f"**Construction:** {ir.get('construction', '')}")
+            st.write(f"**Description:** {ir.get('description', '')}")
+            if ir.get('features'):
+                st.write(f"**Features:** {', '.join(ir['features'])}")
+            st.write(f"**Intended Use:** {ir.get('intended_use', '')}")
+            if ir.get('additional_notes'):
+                st.write(f"**Notes:** {ir['additional_notes']}")
 
+    # -------- Advanced options --------
     st.markdown("---")
     with st.expander("⚙️ Advanced Options"):
         col1, col2 = st.columns(2)
         with col1:
-            search_depth = st.slider("Search Depth", 3, 10, 5)
+            st.slider("Search Depth", 3, 10, 5, key="search_depth")
         with col2:
-            enable_fallback = st.checkbox("Enable Fallback Analysis", value=True)
+            st.checkbox("Enable Fallback Analysis", value=True, key="enable_fallback")
 
+    # -------- Classify --------
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         classify_button = st.button("🔍 Classify Product", type="primary", use_container_width=True)
 
     if classify_button:
-        if not product_name or not st.session_state.form_description:
+        # Read directly from widget keys (no on_change; one click works)
+        product_name = st.session_state.product_name_input.strip()
+        description  = st.session_state.description_input.strip()
+        material     = st.session_state.material_input.strip()
+        use_value    = st.session_state.use_input.strip()
+        origin       = st.session_state.origin_input.strip()
+
+        if not product_name or not description:
             st.error("⚠️ Please enter at least Product Name and Description")
         else:
             with st.spinner("🤖 Analyzing product and applying GRI rules..."):
                 try:
                     product_info = {
                         'product_name': product_name,
-                        'description': st.session_state.form_description,
-                        'material': st.session_state.form_material,
-                        'use': st.session_state.form_use,
-                        'origin': st.session_state.origin_input
+                        'description': description,
+                        'material': material,
+                        'use': use_value,
+                        'origin': origin
                     }
+
                     result = st.session_state.agent.classify_product(product_info)
-                    if enable_fallback and result.get('confidence', '0%') == '0%':
+
+                    conf_raw = str(result.get('confidence', '0')).replace('%', '')
+                    try:
+                        conf_num = float(conf_raw)
+                    except Exception:
+                        conf_num = 0.0
+
+                    if st.session_state.enable_fallback and conf_num <= 0:
                         st.warning("Product not found in database. Using AI fallback analysis...")
                         result = st.session_state.fallback.analyze_unknown_product(product_info)
 
@@ -374,6 +416,7 @@ def show_classifier_page():
                     st.session_state.current_product_info = product_info
                     st.session_state.classification_complete = True
                     display_results(result, product_info)
+
                 except Exception as e:
                     st.error(f"❌ Classification error: {str(e)}")
                     with st.expander("🔧 Error Details"):
@@ -399,7 +442,10 @@ def display_results(result, product_info):
     with col3:
         st.markdown("### Confidence")
         confidence = result.get('confidence', '0%')
-        confidence_val = float(confidence.replace('%', '')) if isinstance(confidence, str) else confidence
+        try:
+            confidence_val = float(str(confidence).replace('%', ''))
+        except Exception:
+            confidence_val = 0.0
         color_class = "confidence-high" if confidence_val >= 80 else ("confidence-medium" if confidence_val >= 60 else "confidence-low")
         st.markdown(f'<h3 class="{color_class}">{confidence_val:.0f}%</h3>', unsafe_allow_html=True)
 
@@ -744,8 +790,11 @@ def show_about_page():
         st.info(f"🤖 Currently using AI Model: **{model_name}**")
     st.markdown("""
     ## AI-Powered Customs Classification System
-    - **AI Model**: Google Gemini (with automatic fallback)
-    - **Vector DB**: Pinecone · **Framework**: LangChain · **UI**: Streamlit
+    - **AI Classification** (Gemini) with automatic fallback
+    - **Auto-Fill** from product name and **Image Auto-Fill**
+    - **Vector Search** + **CROSS rulings**
+    - **Confidence Scoring** + **Feedback loop**
+    - **Duty Calculator** and **Analytics Dashboard**
     """)
 
 if __name__ == "__main__":
