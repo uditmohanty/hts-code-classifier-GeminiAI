@@ -4,6 +4,8 @@ import json
 import os
 import tempfile
 from datetime import datetime
+
+# --- your project modules ---
 from src.agents.hs_code_agent import HSCodeAgent
 from src.agents.fallback_analyzer import FallbackAnalyzer
 from src.utils.report_generator import ReportGenerator
@@ -12,8 +14,10 @@ from src.utils.analytics import AnalyticsEngine
 from src.utils.duty_calculator import DutyCalculator
 from src.utils.product_enhancer import ProductEnhancer
 from src.utils.image_analyzer import ImageAnalyzer
+
+# charts
 import plotly.graph_objects as go
-import plotly.express as px  # noqa: F401 (kept for Analytics plots)
+import plotly.express as px  # noqa: F401 (used inside AnalyticsEngine)
 
 # =========================
 # Page config
@@ -58,6 +62,8 @@ def _apply_to_form_and_widgets(description: str = "", material: str = "", intend
     st.session_state.form_description = description or ""
     st.session_state.form_material = material or ""
     st.session_state.form_use = intended_use or ""
+
+    # widget keys (these drive visible inputs)
     if product_name is not None:
         st.session_state.product_name_input = product_name or st.session_state.get("product_name_input", "")
     st.session_state.description_input = st.session_state.form_description
@@ -79,7 +85,7 @@ def clear_form():
     st.session_state.form_description = ""
     st.session_state.form_use = ""
     st.session_state.auto_filled_data = None
-    st.session_state.image_analysis = None
+    st.session_state.image_analysis = {}   # dict, not None (prevents AttributeError)
     st.session_state.classification_complete = False
     st.session_state.product_name_input = ""
     st.session_state.origin_input = ""
@@ -108,14 +114,16 @@ if 'agent' not in st.session_state:
             st.error(f"Failed to initialize components: {str(e)}")
             st.session_state.init_success = False
 
-# Model-side form values (we keep these for compatibility with utils)
+# model-side form values
 st.session_state.setdefault('form_material', "")
 st.session_state.setdefault('form_description', "")
 st.session_state.setdefault('form_use', "")
 st.session_state.setdefault('classification_complete', False)
 st.session_state.setdefault('auto_filled_data', None)
-st.session_state.setdefault('image_analysis', None)
+st.session_state.setdefault('image_analysis', {})     # dict default
 st.session_state.setdefault('last_image_sig', None)
+st.session_state.setdefault('enable_fallback', True)
+st.session_state.setdefault('search_depth', 5)
 
 # Widget defaults must exist before widgets render
 _ensure_widget_defaults()
@@ -348,9 +356,10 @@ def show_classifier_page():
                 except Exception as e:
                     st.error(f"❌ Image analysis error: {str(e)}")
 
-    # Optional: show image analysis results
-    if st.session_state.get("image_analysis", {}).get("success"):
-        ir = st.session_state.image_analysis
+    # Optional: show image analysis results (safe dict handling)
+    ia = st.session_state.get("image_analysis") or {}
+    if ia.get("success"):
+        ir = ia
         with st.expander("📋 Image Analysis Results", expanded=False):
             st.write(f"**Product Identified:** {ir.get('product_name', '')}")
             st.write(f"**Material:** {ir.get('material', '')}")
@@ -367,9 +376,9 @@ def show_classifier_page():
     with st.expander("⚙️ Advanced Options"):
         col1, col2 = st.columns(2)
         with col1:
-            st.slider("Search Depth", 3, 10, 5, key="search_depth")
+            st.slider("Search Depth", 3, 10, st.session_state.search_depth, key="search_depth")
         with col2:
-            st.checkbox("Enable Fallback Analysis", value=True, key="enable_fallback")
+            st.checkbox("Enable Fallback Analysis", value=st.session_state.enable_fallback, key="enable_fallback")
 
     # -------- Classify --------
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -791,7 +800,7 @@ def show_about_page():
     st.markdown("""
     ## AI-Powered Customs Classification System
     - **AI Classification** (Gemini) with automatic fallback
-    - **Auto-Fill** from product name and **Image Auto-Fill**
+    - **Auto-Fill from Product Name** and **Image Auto-Fill**
     - **Vector Search** + **CROSS rulings**
     - **Confidence Scoring** + **Feedback loop**
     - **Duty Calculator** and **Analytics Dashboard**
