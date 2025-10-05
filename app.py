@@ -8,7 +8,12 @@ from datetime import datetime
 # --- project modules ---
 from src.agents.hs_code_agent import HSCodeAgent
 from src.agents.fallback_analyzer import FallbackAnalyzer
-from src.utils.report_generator import ReportGenerator
+# --- Guarded import (STEP 2) ---
+try:
+    from src.utils.report_generator import ReportGenerator
+except ModuleNotFoundError:
+    ReportGenerator = None
+
 from src.utils.feedback_manager import FeedbackManager
 from src.utils.analytics import AnalyticsEngine
 from src.utils.duty_calculator import DutyCalculator
@@ -380,7 +385,6 @@ def show_classifier_page():
                         'origin': origin
                     }
 
-                    # Primary DB/agent
                     result = st.session_state.agent.classify_product(product_info) or {}
 
                     def _float_conf(x):
@@ -397,14 +401,12 @@ def show_classifier_page():
                     rec_code = str(result.get('recommended_code', '')).strip().upper()
                     conf_val = _float_conf(result.get('confidence', -1))
 
-                    # Fallback triggers
                     missing_or_low = (rec_code in ("", "N/A", "ERROR")) or (conf_val < 50.0)
 
                     if st.session_state.enable_fallback and missing_or_low:
                         st.info("🔁 No strong DB match. Using LLM fallback…")
                         result = st.session_state.fallback.analyze_unknown_product(product_info)
 
-                    # Normalize confidence to 'NN%'
                     if 'confidence' not in result:
                         result['confidence'] = f"{max(0.0, conf_val):.0f}%"
                     elif not str(result['confidence']).endswith("%"):
@@ -497,9 +499,18 @@ def display_results(result, product_info):
 
     st.subheader("Export Classification Report")
     col1, col2 = st.columns(2)
+
+    # JSON export works even without ReportLab
     with col1:
-        report_generator = ReportGenerator()
-        json_report = report_generator.generate_json_report(result, product_info)
+        if ReportGenerator is None:
+            # build JSON manually (no PDF dependency)
+            data = {"generated_at": datetime.now().isoformat(),
+                    "product": product_info, "classification": result}
+            json_report = json.dumps(data, indent=2, ensure_ascii=False)
+        else:
+            rg = ReportGenerator()
+            json_report = rg.generate_json_report(result, product_info)
+
         st.download_button(
             label="📥 Download JSON Report",
             data=json_report,
@@ -507,24 +518,30 @@ def display_results(result, product_info):
             mime="application/json",
             key="json_download"
         )
+
+    # PDF export is shown only if ReportLab is installed
     with col2:
-        report_generator = ReportGenerator()
-        try:
-            pdf_bytes = report_generator.generate_pdf_report(result, product_info)
-            st.download_button(
-                label="📄 Download PDF Report",
-                data=pdf_bytes,
-                file_name=f"hs_code_{product_info['product_name'].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf",
-                mime="application/pdf",
-                key="pdf_download"
-            )
-        except Exception as e:
-            st.error(f"📄 PDF export failed: {e}")
-            with st.expander("How to fix PDF export"):
-                st.write(
-                    "Add Unicode TTF fonts (DejaVuSans.ttf and DejaVuSans-Bold.ttf) under "
-                    "`src/utils/assets/fonts/`, then rerun the app."
+        if ReportGenerator is None:
+            st.error("📄 PDF export disabled: install `reportlab` and redeploy.\n\n"
+                     "Add `reportlab>=4.2.0` to requirements.txt.")
+        else:
+            try:
+                rg = ReportGenerator()
+                pdf_bytes = rg.generate_pdf_report(result, product_info)
+                st.download_button(
+                    label="📄 Download PDF Report",
+                    data=pdf_bytes,
+                    file_name=f"hs_code_{product_info['product_name'].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.pdf",
+                    mime="application/pdf",
+                    key="pdf_download"
                 )
+            except Exception as e:
+                st.error(f"📄 PDF export failed: {e}")
+                with st.expander("How to fix PDF export"):
+                    st.write(
+                        "Add Unicode TTF fonts (DejaVuSans.ttf and DejaVuSans-Bold.ttf) under "
+                        "`src/utils/assets/fonts/`, then redeploy."
+                    )
 
     st.markdown("---")
     display_feedback_section(result, product_info)
