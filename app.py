@@ -49,21 +49,14 @@ st.markdown("""
 # Helpers
 # =========================
 def _ensure_widget_defaults():
-    """Create widget keys with sane defaults if missing."""
     for k in ["product_name_input", "origin_input", "material_input", "description_input", "use_input"]:
         if k not in st.session_state:
             st.session_state[k] = ""
 
 def _apply_to_form_and_widgets(description: str = "", material: str = "", intended_use: str = "", product_name: str = ""):
-    """
-    Apply values to both the app's model state and Streamlit widget keys.
-    IMPORTANT: Call this ONLY before widgets render in the current run.
-    """
     st.session_state.form_description = description or ""
     st.session_state.form_material = material or ""
     st.session_state.form_use = intended_use or ""
-
-    # widget keys (these drive visible inputs)
     if product_name is not None:
         st.session_state.product_name_input = product_name or st.session_state.get("product_name_input", "")
     st.session_state.description_input = st.session_state.form_description
@@ -71,7 +64,6 @@ def _apply_to_form_and_widgets(description: str = "", material: str = "", intend
     st.session_state.use_input = st.session_state.form_use
 
 def _schedule_fill(description: str, material: str, intended_use: str, product_name: str = ""):
-    """Schedule a fill to be applied at the top of the next run (safe for Streamlit)."""
     st.session_state.pending_fill = {
         "description": description or "",
         "material": material or "",
@@ -80,12 +72,11 @@ def _schedule_fill(description: str, material: str, intended_use: str, product_n
     }
 
 def clear_form():
-    """Clear all form fields (both model + widget state)."""
     st.session_state.form_material = ""
     st.session_state.form_description = ""
     st.session_state.form_use = ""
     st.session_state.auto_filled_data = None
-    st.session_state.image_analysis = {}   # dict, not None (prevents AttributeError)
+    st.session_state.image_analysis = {}   # dict, not None
     st.session_state.classification_complete = False
     st.session_state.product_name_input = ""
     st.session_state.origin_input = ""
@@ -114,18 +105,15 @@ if 'agent' not in st.session_state:
             st.error(f"Failed to initialize components: {str(e)}")
             st.session_state.init_success = False
 
-# model-side form values
 st.session_state.setdefault('form_material', "")
 st.session_state.setdefault('form_description', "")
 st.session_state.setdefault('form_use', "")
 st.session_state.setdefault('classification_complete', False)
 st.session_state.setdefault('auto_filled_data', None)
-st.session_state.setdefault('image_analysis', {})     # dict default
+st.session_state.setdefault('image_analysis', {})
 st.session_state.setdefault('last_image_sig', None)
 st.session_state.setdefault('enable_fallback', True)
 st.session_state.setdefault('search_depth', 5)
-
-# Widget defaults must exist before widgets render
 _ensure_widget_defaults()
 
 # =========================
@@ -178,7 +166,6 @@ def main():
         show_about_page()
 
 def show_classifier_page():
-    # ---- Apply any scheduled fills BEFORE rendering widgets (critical fix) ----
     if 'pending_fill' in st.session_state:
         pf = st.session_state.pending_fill
         _apply_to_form_and_widgets(
@@ -187,7 +174,7 @@ def show_classifier_page():
             pf.get("use", ""),
             pf.get("product_name", "")
         )
-        del st.session_state.pending_fill  # consume it
+        del st.session_state.pending_fill
 
     st.markdown('<div class="main-header">📦 HS Code Classification System</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">AI-powered customs classification for international trade</div>', unsafe_allow_html=True)
@@ -203,7 +190,6 @@ def show_classifier_page():
 
     st.subheader("Product Information")
 
-    # -------- Product name + Auto-Fill from text --------
     col1, col2 = st.columns([3, 1])
     with col1:
         st.text_input(
@@ -222,7 +208,6 @@ def show_classifier_page():
             disabled=not st.session_state.product_name_input.strip()
         )
 
-    # Auto-Fill from typed product name
     if auto_fill_clicked:
         with st.spinner("🤖 AI is analyzing and generating detailed product information..."):
             try:
@@ -231,7 +216,6 @@ def show_classifier_page():
                     desc = enhanced_data.get('description', '')
                     mat = enhanced_data.get('material', '')
                     use = enhanced_data.get('intended_use', '')
-                    # Keep user's product name; just fill details
                     _schedule_fill(desc, mat, use, product_name=st.session_state.product_name_input)
                     st.session_state.auto_filled_data = enhanced_data
                     st.success(f"✨ Details auto-generated using {enhanced_data.get('model_used','AI')}!")
@@ -248,13 +232,11 @@ def show_classifier_page():
                     import traceback
                     st.code(traceback.format_exc())
 
-    # Blue banner if AI used
     if st.session_state.auto_filled_data and not st.session_state.classification_complete:
         model_info = st.session_state.auto_filled_data.get('model_used', '')
         if model_info:
             st.info(f"✨ Using AI Model: {model_info}")
 
-    # -------- Form fields (key-only; no value/on_change) --------
     col1, col2 = st.columns(2)
     with col1:
         st.text_input(
@@ -284,14 +266,12 @@ def show_classifier_page():
             key="use_input",
         )
 
-    # Clear Auto-Fill
     if st.session_state.get('auto_filled_data') and not st.session_state.classification_complete:
         if st.button("🔄 Clear Auto-Fill", key="clear_autofill"):
             st.session_state.auto_filled_data = None
             _schedule_fill("", "", "", product_name=st.session_state.product_name_input)
             st.rerun()
 
-    # -------- Image Upload -> Auto-Analyze -> Auto-Fill --------
     st.markdown("---")
     st.subheader("🖼️ Product Image Analysis (Optional)")
 
@@ -301,17 +281,15 @@ def show_classifier_page():
         help="Upload a product image. The app will auto-fill product name & details."
     )
 
-    # Show the image if present
     if uploaded_file is not None:
         st.image(uploaded_file, caption="Uploaded Product Image", use_container_width=True)
 
-    # If a new image is uploaded, auto-run analysis and schedule the fill
     if uploaded_file is not None:
         try:
             file_bytes = uploaded_file.getvalue()
             image_sig = f"{uploaded_file.name}:{len(file_bytes)}"
         except Exception:
-            image_sig = uploaded_file.name  # fallback
+            image_sig = uploaded_file.name
 
         if st.session_state.get("last_image_sig") != image_sig:
             with st.spinner("🖼️ Auto-analyzing the product image..."):
@@ -356,7 +334,6 @@ def show_classifier_page():
                 except Exception as e:
                     st.error(f"❌ Image analysis error: {str(e)}")
 
-    # Optional: show image analysis results (safe dict handling)
     ia = st.session_state.get("image_analysis") or {}
     if ia.get("success"):
         ir = ia
@@ -371,7 +348,6 @@ def show_classifier_page():
             if ir.get('additional_notes'):
                 st.write(f"**Notes:** {ir['additional_notes']}")
 
-    # -------- Advanced options --------
     st.markdown("---")
     with st.expander("⚙️ Advanced Options"):
         col1, col2 = st.columns(2)
@@ -380,13 +356,11 @@ def show_classifier_page():
         with col2:
             st.checkbox("Enable Fallback Analysis", value=st.session_state.enable_fallback, key="enable_fallback")
 
-    # -------- Classify --------
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         classify_button = st.button("🔍 Classify Product", type="primary", use_container_width=True)
 
     if classify_button:
-        # Read directly from widget keys (no on_change; one click works)
         product_name = st.session_state.product_name_input.strip()
         description  = st.session_state.description_input.strip()
         material     = st.session_state.material_input.strip()
@@ -406,17 +380,38 @@ def show_classifier_page():
                         'origin': origin
                     }
 
-                    result = st.session_state.agent.classify_product(product_info)
+                    # --- Primary DB/agent classification ---
+                    result = st.session_state.agent.classify_product(product_info) or {}
 
-                    conf_raw = str(result.get('confidence', '0')).replace('%', '')
-                    try:
-                        conf_num = float(conf_raw)
-                    except Exception:
-                        conf_num = 0.0
+                    def _float_conf(x):
+                        try:
+                            s = str(x).strip()
+                            s = s[:-1] if s.endswith("%") else s
+                            n = float(s)
+                            if 0.0 <= n <= 1.0:
+                                n *= 100.0
+                            return max(0.0, min(100.0, n))
+                        except Exception:
+                            return -1.0
 
-                    if st.session_state.enable_fallback and conf_num <= 0:
-                        st.warning("Product not found in database. Using AI fallback analysis...")
+                    rec_code = str(result.get('recommended_code', '')).strip().upper()
+                    conf_val = _float_conf(result.get('confidence', -1))
+
+                    # Fallback triggers: no code / N/A / ERROR / very low confidence
+                    missing_or_low = (rec_code in ("", "N/A", "ERROR")) or (conf_val < 50.0)
+
+                    if st.session_state.enable_fallback and missing_or_low:
+                        st.info("🔁 No strong DB match. Using LLM fallback…")
                         result = st.session_state.fallback.analyze_unknown_product(product_info)
+
+                    # Normalize confidence to 'NN%'
+                    if 'confidence' not in result:
+                        result['confidence'] = f"{max(0.0, conf_val):.0f}%"
+                    elif not str(result['confidence']).endswith("%"):
+                        try:
+                            result['confidence'] = f"{float(result['confidence']):.0f}%"
+                        except Exception:
+                            result['confidence'] = "0%"
 
                     result['timestamp'] = datetime.now().isoformat()
                     result['product_info'] = product_info
@@ -424,6 +419,7 @@ def show_classifier_page():
                     st.session_state.current_result = result
                     st.session_state.current_product_info = product_info
                     st.session_state.classification_complete = True
+
                     display_results(result, product_info)
 
                 except Exception as e:
