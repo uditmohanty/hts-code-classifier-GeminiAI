@@ -14,9 +14,9 @@ from src.utils.image_analyzer import ImageAnalyzer
 import plotly.graph_objects as go
 import plotly.express as px
 
-# -------------------------------
+# =========================
 # Page config
-# -------------------------------
+# =========================
 st.set_page_config(
     page_title="HS Code Classifier",
     page_icon="📦",
@@ -24,28 +24,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# -------------------------------
-# Custom CSS
-# -------------------------------
+# =========================
+# CSS
+# =========================
 st.markdown("""
 <style>
-    .main-header {
-        font-size: 2.5rem;
-        font-weight: 700;
-        color: #1f77b4;
-        margin-bottom: 0.5rem;
-    }
-    .sub-header {
-        font-size: 1.2rem;
-        color: #666;
-        margin-bottom: 2rem;
-    }
-    .metric-card {
-        background: #f0f2f6;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin: 0.5rem 0;
-    }
+    .main-header { font-size: 2.5rem; font-weight: 700; color: #1f77b4; margin-bottom: 0.5rem; }
+    .sub-header { font-size: 1.2rem; color: #666; margin-bottom: 2rem; }
+    .metric-card { background: #f0f2f6; padding: 1rem; border-radius: 0.5rem; margin: 0.5rem 0; }
     .confidence-high { color: #28a745; }
     .confidence-medium { color: #ffc107; }
     .confidence-low { color: #dc3545; }
@@ -54,24 +40,33 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------------------
+# =========================
 # Helpers
-# -------------------------------
+# =========================
 def _ensure_widget_defaults():
     """Create widget keys with sane defaults if missing."""
     for k in ["product_name_input", "origin_input", "material_input", "description_input", "use_input"]:
-        st.session_state.setdefault(k, "")
+        if k not in st.session_state:
+            st.session_state[k] = ""
 
-def _apply_to_form(description: str = "", material: str = "", intended_use: str = ""):
-    """Write data into both form_* (your model state) AND widget keys (Streamlit state)."""
+def _apply_to_form_and_widgets(description: str = "", material: str = "", intended_use: str = ""):
+    """Write data into both form_* (model state) AND widget keys (Streamlit)."""
     st.session_state.form_description = description or ""
     st.session_state.form_material = material or ""
     st.session_state.form_use = intended_use or ""
 
-    # Critical: update widget states so inputs actually show the new values.
+    # update widget values (safe only if done BEFORE widgets render in this run)
     st.session_state.description_input = st.session_state.form_description
     st.session_state.material_input = st.session_state.form_material
     st.session_state.use_input = st.session_state.form_use
+
+def _schedule_fill(description: str, material: str, intended_use: str):
+    """Schedule a fill to be applied at the top of next run."""
+    st.session_state.pending_fill = {
+        "description": description or "",
+        "material": material or "",
+        "use": intended_use or ""
+    }
 
 def clear_form():
     """Clear all form fields (both model + widget state)."""
@@ -88,9 +83,9 @@ def clear_form():
     st.session_state.description_input = ""
     st.session_state.use_input = ""
 
-# -------------------------------
+# =========================
 # Session state init
-# -------------------------------
+# =========================
 if 'classification_history' not in st.session_state:
     st.session_state.classification_history = []
 
@@ -119,9 +114,9 @@ st.session_state.setdefault('image_analysis', None)
 # Widget defaults must exist before widgets render
 _ensure_widget_defaults()
 
-# -------------------------------
+# =========================
 # App
-# -------------------------------
+# =========================
 def main():
     with st.sidebar:
         st.markdown("""
@@ -169,6 +164,12 @@ def main():
         show_about_page()
 
 def show_classifier_page():
+    # ---- Apply any scheduled fills BEFORE rendering widgets (critical fix) ----
+    if 'pending_fill' in st.session_state:
+        pf = st.session_state.pending_fill
+        _apply_to_form_and_widgets(pf.get("description",""), pf.get("material",""), pf.get("use",""))
+        del st.session_state.pending_fill  # consume it
+
     st.markdown('<div class="main-header">📦 HS Code Classification System</div>', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">AI-powered customs classification for international trade</div>', unsafe_allow_html=True)
 
@@ -202,22 +203,19 @@ def show_classifier_page():
             disabled=not product_name
         )
 
-    # ---- Auto-Fill handler (FIXED) ----
     if auto_fill_clicked and product_name:
         with st.spinner("🤖 AI is analyzing and generating detailed product information..."):
             try:
                 enhanced_data = st.session_state.enhancer.enhance_product_info(product_name)
-
                 if enhanced_data and enhanced_data.get('success', False):
                     desc = enhanced_data.get('description', '')
                     mat = enhanced_data.get('material', '')
                     use = enhanced_data.get('intended_use', '')
 
-                    _apply_to_form(desc, mat, use)   # <-- update both model + widget states
+                    # schedule -> rerun -> apply at top next run
+                    _schedule_fill(desc, mat, use)
                     st.session_state.auto_filled_data = enhanced_data
-
-                    model_used = enhanced_data.get('model_used', 'AI')
-                    st.success(f"✨ Details auto-generated using {model_used}! Review and edit if needed.")
+                    st.success(f"✨ Details auto-generated using {enhanced_data.get('model_used','AI')}!")
                     st.rerun()
                 else:
                     error_msg = enhanced_data.get('error', 'Unknown error') if enhanced_data else 'No response from AI'
@@ -236,7 +234,7 @@ def show_classifier_page():
         if model_info:
             st.info(f"✨ Using AI Model: {model_info}")
 
-    # ---- Rest of the form
+    # ---- Form fields
     col1, col2 = st.columns(2)
     with col1:
         material = st.text_input(
@@ -274,11 +272,11 @@ def show_classifier_page():
 
     if st.session_state.auto_filled_data and not st.session_state.classification_complete:
         if st.button("🔄 Clear Auto-Fill", key="clear_autofill"):
+            _schedule_fill("", "", "")
             st.session_state.auto_filled_data = None
-            _apply_to_form("", "", "")
             st.rerun()
 
-    # ---- Image analysis (unchanged except for applying values to widgets)
+    # ---- Image analysis
     st.markdown("---")
     st.subheader("🖼️ Product Image Analysis (Optional)")
     uploaded_file = st.file_uploader(
@@ -303,17 +301,17 @@ def show_classifier_page():
                     image_result = st.session_state.image_analyzer.analyze_product_image(tmp_path)
                     os.unlink(tmp_path)
 
-                    if image_result['success']:
+                    if image_result.get('success'):
                         st.success("✅ Image analyzed successfully!")
                         st.session_state.image_analysis = image_result
                         with st.expander("📋 Image Analysis Results", expanded=True):
-                            st.write(f"**Product Identified:** {image_result['product_name']}")
-                            st.write(f"**Material:** {image_result['material']}")
-                            st.write(f"**Construction:** {image_result['construction']}")
-                            st.write(f"**Description:** {image_result['description']}")
+                            st.write(f"**Product Identified:** {image_result.get('product_name','')}")
+                            st.write(f"**Material:** {image_result.get('material','')}")
+                            st.write(f"**Construction:** {image_result.get('construction','')}")
+                            st.write(f"**Description:** {image_result.get('description','')}")
                             if image_result.get('features'):
                                 st.write(f"**Features:** {', '.join(image_result['features'])}")
-                            st.write(f"**Intended Use:** {image_result['intended_use']}")
+                            st.write(f"**Intended Use:** {image_result.get('intended_use','')}")
                             if image_result.get('additional_notes'):
                                 st.write(f"**Notes:** {image_result['additional_notes']}")
                     else:
@@ -321,21 +319,22 @@ def show_classifier_page():
                 except Exception as e:
                     st.error(f"❌ Image analysis error: {str(e)}")
 
-        if st.session_state.image_analysis and st.session_state.image_analysis['success']:
+        if st.session_state.image_analysis and st.session_state.image_analysis.get('success'):
             if st.button("📝 Use Image Data to Fill Form", type="primary", key="use_image_data"):
-                _apply_to_form(
-                    st.session_state.image_analysis['description'],
-                    st.session_state.image_analysis['material'],
-                    st.session_state.image_analysis['intended_use']
+                ir = st.session_state.image_analysis
+                _schedule_fill(
+                    ir.get('description', ''),
+                    ir.get('material', ''),
+                    ir.get('intended_use', '')
                 )
                 st.session_state.auto_filled_data = {
-                    'enhanced_name': st.session_state.image_analysis['product_name'],
-                    'description': st.session_state.image_analysis['description'],
-                    'material': st.session_state.image_analysis['material'],
-                    'intended_use': st.session_state.image_analysis['intended_use'],
+                    'enhanced_name': ir.get('product_name', ''),
+                    'description': ir.get('description', ''),
+                    'material': ir.get('material', ''),
+                    'intended_use': ir.get('intended_use', ''),
                     'success': True
                 }
-                st.success("✅ Form filled with image analysis data!")
+                st.success("✅ Form fill scheduled from image analysis data!")
                 st.rerun()
 
     st.markdown("---")
@@ -361,7 +360,7 @@ def show_classifier_page():
                         'description': st.session_state.form_description,
                         'material': st.session_state.form_material,
                         'use': st.session_state.form_use,
-                        'origin': origin
+                        'origin': st.session_state.origin_input
                     }
                     result = st.session_state.agent.classify_product(product_info)
                     if enable_fallback and result.get('confidence', '0%') == '0%':
@@ -624,8 +623,8 @@ def show_duty_calculator_page():
     with st.expander("ℹ️ Understanding Import Duties & Fees"):
         st.markdown("""
         ### What's Included in Total Landed Cost?
-        **1. Base Duty** – Tariff rate from the HTS
-        **2. MPF** – 0.3464% (min $27.75, max $538.40)
+        **1. Base Duty** – Tariff rate from the HTS  
+        **2. MPF** – 0.3464% (min $27.75, max $538.40)  
         **3. HMF** – 0.125% (sea shipments only)
         """)
 
