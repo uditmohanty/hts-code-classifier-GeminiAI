@@ -19,7 +19,7 @@ class ImageAnalyzer:
             raise RuntimeError("google-generativeai is not installed.")
 
         genai.configure(api_key=api_key)
-        self.model_name = model_name or os.environ.get("GEMINI_IMAGE_MODEL", "gemini-1.5-flash")
+        self.model_name = model_name or os.environ.get("GEMINI_IMAGE_MODEL", "gemini-2.5-flash")
         self.model = genai.GenerativeModel(self.model_name)
 
     def _extract_json(self, text: str) -> dict:
